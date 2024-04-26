@@ -1158,7 +1158,7 @@ cda75171ca7d8bf920aab6d56ef9aadec16fd15d - kernel-open/common/inc/os/nv_memory_t
 86443277db67b64c70260e5668bb4140bc90165c - kernel-open/nvidia/nv-clk.c
 ef8fd76c55625aeaa71c9b789c4cf519ef6116b2 - kernel-open/nvidia/libspdm_hkdf.c
 4c64885083621f5f313a7dee72e14eee8abed2a0 - kernel-open/nvidia/nvidia-sources.Kbuild
-bdd4cf90dc9719e421b536811fc3802029a7a45a - kernel-open/nvidia/nv-platform.c
+e5d6dfa062d2d9533760f883bdd36a669d79b759 - kernel-open/nvidia/nv-platform.c
 e5cd40b060a69cf71220c910e9428d7f261892f7 - kernel-open/nvidia/internal_crypt_lib.h
 646e6b03521587cc1a02617afd697183e5d1a83a - kernel-open/nvidia/nv-kthread-q.c
 4e5a330fa40dab218821976ac1b530c649d48994 - kernel-open/nvidia/libspdm_ecc.c
