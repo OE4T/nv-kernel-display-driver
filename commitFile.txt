@@ -2,7 +2,7 @@ Updating prebuilts and/or headers
 
 af3ee56442f16029cb9b13537477c384226b22fc - CODE_OF_CONDUCT.md
 ac7f91dfb6c5c469d2d8196c6baebe46ede5aee0 - CHANGELOG.md
-5d8de463980b3630713790faa346c652c48040c6 - README.md
+709eccfbabb4248c7ab33f3c93725d55858655f3 - README.md
 d13779dbbab1c776db15f462cd46b29f2c0f8c7c - Makefile
 ec5f1eb408e0b650158e0310fb1ddd8e9b323a6f - CONTRIBUTING.md
 5728867ce2e96b63b29367be6aa1c0e47bcafc8f - SECURITY.md
@@ -546,7 +546,7 @@ c2d8bb02052e80cd0d11695e734f5e05ab7faeb5 - src/common/sdk/nvidia/inc/class/cl907
 a9503a5558b08071f35b11df9a917310947c378b - src/common/sdk/nvidia/inc/class/cl00da.h
 b1133e9abe15cf7b22c04d9627afa2027e781b81 - src/common/sdk/nvidia/inc/class/cl917c.h
 866977d299eac812b41eb702a517e27bdc56e875 - src/common/sdk/nvidia/inc/class/clc37a.h
-866ec5c86032f9f8c11f61355763220a015f8b69 - src/common/inc/nvUnixVersion.h
+93fe5d7a18ebd4af3921bdf6f0cb7ebbf1fb1a7d - src/common/inc/nvUnixVersion.h
 b4c5d759f035b540648117b1bff6b1701476a398 - src/common/inc/nvCpuUuid.h
 8c41b32c479f0de04df38798c56fd180514736fc - src/common/inc/nvBldVer.h
 d877f4b99ae7d18cc5c78b85e89c0a7e3f3e8418 - src/common/inc/nvPNPVendorIds.h
@@ -1090,7 +1090,7 @@ e35ff9733ea7fbffe0641399ccb0fd92a492e30d - src/nvidia/inc/libraries/nvoc/runtime
 1b28bd0ee2e560ca2854a73a3ee5fb1cf713d013 - src/nvidia/inc/libraries/nvoc/utility.h
 3919368b5b4cdd72d7da49801232048b5e786845 - src/nvidia/inc/libraries/nvoc/prelude.h
 0b1508742a1c5a04b6c3a4be1b48b506f4180848 - kernel-open/dkms.conf
-4dc2e90b02ea481ef1fecb2e22551354bf8615ca - kernel-open/Kbuild
+ee5936c19611903287262cfadd5ff44291bc05cc - kernel-open/Kbuild
 4f4410c3c8db46e5a98d7a35f7d909a49de6cb43 - kernel-open/Makefile
 6a9b31e3d157dea5790b05752f5521d2870f88bc - kernel-open/conftest.sh
 646e6b03521587cc1a02617afd697183e5d1a83a - kernel-open/nvidia-modeset/nv-kthread-q.c
@@ -1158,7 +1158,7 @@ cda75171ca7d8bf920aab6d56ef9aadec16fd15d - kernel-open/common/inc/os/nv_memory_t
 86443277db67b64c70260e5668bb4140bc90165c - kernel-open/nvidia/nv-clk.c
 ef8fd76c55625aeaa71c9b789c4cf519ef6116b2 - kernel-open/nvidia/libspdm_hkdf.c
 4c64885083621f5f313a7dee72e14eee8abed2a0 - kernel-open/nvidia/nvidia-sources.Kbuild
-bdd4cf90dc9719e421b536811fc3802029a7a45a - kernel-open/nvidia/nv-platform.c
+e5d6dfa062d2d9533760f883bdd36a669d79b759 - kernel-open/nvidia/nv-platform.c
 e5cd40b060a69cf71220c910e9428d7f261892f7 - kernel-open/nvidia/internal_crypt_lib.h
 646e6b03521587cc1a02617afd697183e5d1a83a - kernel-open/nvidia/nv-kthread-q.c
 4e5a330fa40dab218821976ac1b530c649d48994 - kernel-open/nvidia/libspdm_ecc.c

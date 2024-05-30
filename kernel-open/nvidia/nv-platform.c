@@ -1389,6 +1389,7 @@ NvBool nv_get_hdcp_enabled(nv_state_t *nv)
 int nv_disable_simplefb_clocks(void)
 {
     int status = 0;
+    static bool is_coldboot = true;
 
 #if defined(CONFIG_FB) && defined(NV_NUM_REGISTERED_FB_PRESENT)
     if (num_registered_fb > 0)
@@ -1407,7 +1408,7 @@ int nv_disable_simplefb_clocks(void)
             int j;
 
             np = of_find_node_by_name(NULL, "framebuffer");
-            if ((np != NULL) && of_device_is_available(np))
+            if ((np != NULL) && of_device_is_available(np) && is_coldboot)
             {
 #if defined(NV_LINUX_OF_CLK_H_PRESENT) && defined(NV_OF_CLK_GET_PARENT_COUNT_PRESENT)
                 clk_count = of_clk_get_parent_count(np);
@@ -1429,6 +1430,7 @@ int nv_disable_simplefb_clocks(void)
                     }
                 }
 #endif
+                is_coldboot = false;
             }
             of_node_put(np);
 #endif
