@@ -94,6 +94,8 @@
 #include <drm/drm_atomic_helper.h>
 #endif
 
+#include "nv-kthread-q.h"
+
 static int nv_drm_revoke_modeset_permission(struct drm_device *dev,
                                             struct drm_file *filep,
                                             NvU32 dpyId);
@@ -111,9 +113,51 @@ static const char* nv_get_input_colorspace_name(
             return "IEC 61966-2-2 linear FP";
         case NVKMS_INPUT_COLORSPACE_BT2100_PQ:
             return "ITU-R BT.2100-PQ YCbCr";
+        case NVKMS_INPUT_COLORSPACE_SRGB:
+            return "IEC 61966-2-1 RGB";
+        case NVKMS_INPUT_COLORSPACE_BT601:
+            return "ITU-R BT.601-7";
+        case NVKMS_INPUT_COLORSPACE_BT709:
+            return "ITU-R BT.709-6";
+        case NVKMS_INPUT_COLORSPACE_BT709_LINEAR:
+            return "ITU-R BT.709-6 linear";
+        case NVKMS_INPUT_COLORSPACE_BT2020:
+            return "ITU-R BT.2020-2";
         default:
             /* We shoudn't hit this */
             WARN_ON("Unsupported input colorspace");
+            return "None";
+    }
+};
+
+static const char* nv_get_input_colorrange_name(
+    enum NvKmsInputColorRange colorRange)
+{
+    switch (colorRange) {
+        case NVKMS_INPUT_COLORRANGE_DEFAULT:
+            return "Default";
+        case NVKMS_INPUT_COLORRANGE_LIMITED:
+            return "Input Color range Limited";
+        case NVKMS_INPUT_COLORRANGE_FULL:
+            return "Input Color range Full";
+        default:
+            /* We shoudn't hit this */
+            WARN_ON("Unsupported input Color range");
+            return "None";
+    }
+};
+
+static const char* nv_get_output_colorrange_name(
+    enum NvKmsDpyAttributeColorRangeValue colorRange)
+{
+    switch (colorRange) {
+        case NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_FULL:
+            return "Output Color range Full";
+        case NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_LIMITED:
+            return "Output Color range Limited";
+        default:
+            /* We shoudn't hit this */
+            WARN_ON("Unsupported output colorrange");
             return "None";
     }
 };
@@ -226,10 +270,10 @@ static void nv_drm_event_callback(const struct NvKmsKapiEvent *event)
                 event->u.dynamicDisplayConnected.display);
             break;
         case NVKMS_EVENT_TYPE_FLIP_OCCURRED:
-            nv_drm_handle_flip_occurred(
+            nv_drm_handle_flip_event(
                 nv_dev,
                 event->u.flipOccurred.head,
-                event->u.flipOccurred.layer);
+                event->u.flipOccurred.layer, true);
             break;
         default:
             break;
@@ -360,14 +404,11 @@ static void nv_drm_enumerate_encoders_and_connectors
  */
 static int nv_drm_create_properties(struct nv_drm_device *nv_dev)
 {
-    struct drm_prop_enum_list enum_list[3] = { };
+    struct drm_prop_enum_list list_cs[8] = { };
+    struct drm_prop_enum_list list_input_cr[3] = { };
+    struct drm_prop_enum_list list_output_cr[2] = { };
     int i, len = 0;
 
-    for (i = 0; i < 3; i++) {
-        enum_list[len].type = i;
-        enum_list[len].name = nv_get_input_colorspace_name(i);
-        len++;
-    }
 
     if (nv_dev->supportsSyncpts) {
         nv_dev->nv_out_fence_property =
@@ -378,14 +419,47 @@ static int nv_drm_create_properties(struct nv_drm_device *nv_dev)
         }
     }
 
+    for (i = 0; i < 8; i++) {
+        list_cs[len].type = i;
+        list_cs[len].name = nv_get_input_colorspace_name(i);
+        len++;
+    }
+
     nv_dev->nv_input_colorspace_property =
         drm_property_create_enum(nv_dev->dev, 0, "NV_INPUT_COLORSPACE",
-                                 enum_list, len);
+                                 list_cs, len);
     if (nv_dev->nv_input_colorspace_property == NULL) {
         NV_DRM_LOG_ERR("Failed to create NV_INPUT_COLORSPACE property");
         return -ENOMEM;
     }
 
+    for (i = 0, len = 0; i < 3; i++) {
+        list_input_cr[len].type = i;
+        list_input_cr[len].name = nv_get_input_colorrange_name(i);
+        len++;
+    }
+
+    nv_dev->nv_input_colorrange_property =
+        drm_property_create_enum(nv_dev->dev, 0, "NV_INPUT_COLORRANGE",
+                                 list_input_cr, len);
+    if (nv_dev->nv_input_colorrange_property == NULL) {
+        NV_DRM_LOG_ERR("Failed to create NV_INPUT_COLORRANGE property");
+        return -ENOMEM;
+    }
+
+    for (i = 0, len = 0; i < 2; i++) {
+        list_output_cr[len].type = i;
+        list_output_cr[len].name = nv_get_output_colorrange_name(i);
+        len++;
+    }
+
+    nv_dev->nv_output_colorrange_property =
+        drm_property_create_enum(nv_dev->dev, 0, "NV_OUTPUT_COLORRANGE",
+                                 list_output_cr, len);
+    if (nv_dev->nv_output_colorrange_property == NULL) {
+        NV_DRM_LOG_ERR("Failed to create NV_OUTPUT_COLORRANGE property");
+        return -ENOMEM;
+    }
 #if defined(NV_DRM_HAS_HDR_OUTPUT_METADATA)
     nv_dev->nv_hdr_output_metadata_property =
         drm_property_create(nv_dev->dev, DRM_MODE_PROP_BLOB,
@@ -555,9 +629,9 @@ static int nv_drm_load(struct drm_device *dev, unsigned long flags)
 
     nv_drm_enumerate_encoders_and_connectors(nv_dev);
 
-#if !defined(NV_DRM_CRTC_STATE_HAS_NO_VBLANK)
+    nv_kthread_q_init(&nv_dev->nv_kthread_q, "nvidia-drm-nv-thread-q");
+
     drm_vblank_init(dev, dev->mode_config.num_crtc);
-#endif
 
     /*
      * Trigger hot-plug processing, to update connection status of
@@ -617,6 +691,8 @@ static void __nv_drm_unload(struct drm_device *dev)
     /* Clean up output polling */
 
     drm_kms_helper_poll_fini(dev);
+
+    nv_kthread_q_stop(&nv_dev->nv_kthread_q);
 
     /* Clean up mode configuration */
 

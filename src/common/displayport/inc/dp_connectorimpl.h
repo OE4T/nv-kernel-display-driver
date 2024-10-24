@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1993-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -42,6 +42,7 @@
 #include "dp_discovery.h"
 #include "dp_groupimpl.h"
 #include "dp_deviceimpl.h"
+#include "dp_qse.h"
 #include "./dptestutil/dp_testmessage.h"
 
 // HDCP abort codes
@@ -68,6 +69,8 @@ static inline unsigned getDataClockMultiplier(NvU64 linkRate, NvU64 laneCount)
 
 namespace DisplayPort
 {
+
+    class QSENonceGenerator;
 
     typedef enum
     {
@@ -126,6 +129,7 @@ namespace DisplayPort
         bool    bPConConnected;                 // HDMI2.1-Protocol Converter (Support SRC control mode) connected.
         bool    bSkipAssessLinkForPCon;         // Skip assessLink() for PCON. DD will call assessFRLLink later.
         bool    bHdcpAuthOnlyOnDemand;          // True if only initiate Hdcp authentication on demand and MST won't auto-trigger authenticate at device attach.
+        bool    bHdcpStrmEncrEnblOnlyOnDemand;  // True if only initiate Hdcp Stream Encryption Enable on demand and MST won't auto-trigger.
         bool    bReassessMaxLink;               // Retry assessLink() if the first assessed link config is lower than the panel max config.
 
         bool    constructorFailed;
@@ -175,6 +179,7 @@ namespace DisplayPort
         List activeGroups;
         LinkedList<GroupImpl> intransitionGroups;
         LinkedList<GroupImpl> addStreamMSTIntransitionGroups;
+        LinkedList<GroupImpl> hdcpEnableTransitionGroups;
         List inactiveGroups;
 
         // Compound query
@@ -232,6 +237,15 @@ namespace DisplayPort
                                                  // This list tracks the currently in progress MST Edid Reads
 
         Device          * lastDeviceSetForVbios;
+
+        QSENonceGenerator * qseNonceGenerator;
+
+        // Tells whether requests made by library to Downstream Device (i.e QSE messages sent to Branch Device) and RM
+        // (i.e KSV validation and Stream Validation requests sent by library to RM after getting QSE message reply from Downstream)
+        // during querying stream status is valid or not.
+        bool        bValidQSERequest;
+        ListElement       * message;             // Outstanding QSE message pointer for which Stream Validation submission failed.
+        NvU8              * clientId;            // ClientId of the group for which Stream Validation submission failed.
 
         // Flag which gets set when ACPI init is done. DD calls notifyAcpiInitDone to tell client that ACPI init is completed
         // & client can now initiate DDC EDID read for a device which supports EDID through SBIOS
@@ -294,6 +308,9 @@ namespace DisplayPort
         // lowering link config. NV Bug #1846925
         //
         bool        bNoFallbackInPostLQA;
+
+        // Flag to tell whether to send QSE after stream encryption on
+        bool        bIsEncryptionQseValid;
 
         bool        bReportDeviceLostBeforeNew;
         bool        bEnableAudioBeyond48K;
@@ -425,6 +442,8 @@ namespace DisplayPort
         char tagHDCPReauthentication;
         char tagDelayedHdcpCapRead;
         char tagDelayedHDCPCPIrqHandling;
+        char tagSendQseMessage;
+        char tagHDCPStreamEncrEnable;
 
         //
         //  Enable disable TMDS mode
@@ -545,6 +564,7 @@ namespace DisplayPort
         bool allocateTimeslice(GroupImpl * targetGroup);
         void freeTimeslice(GroupImpl * targetGroup);
         void flushTimeslotsToHardware();
+        void hdcpRenegotiate(NvU64 cN, NvU64 cKsv);
         bool getHDCPAbortCodesDP12(NvU32 &hdcpAbortCodesDP12);
         bool getOuiSink(unsigned &ouiId, char * modelName, size_t modelNameBufferSize, NvU8 & chipRevision);
         bool hdcpValidateKsv(const NvU8 *ksv, NvU32 Size);

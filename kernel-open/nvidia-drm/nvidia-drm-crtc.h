@@ -41,20 +41,16 @@
 struct nv_drm_crtc {
     NvU32 head;
 
+    bool vblank_enabled;
     /**
      * @flip_list:
      *
      * List of flips pending to get processed by __nv_drm_handle_flip_event().
-     * Protected by @flip_list_lock.
+     * Protected by @vblank_q_lock.
      */
     struct list_head flip_list;
 
-    /**
-     * @flip_list_lock:
-     *
-     * Spinlock to protect @flip_list.
-     */
-    spinlock_t flip_list_lock;
+    struct mutex vblank_q_lock;
 
     /**
      * @modeset_permission_filep:
@@ -62,6 +58,11 @@ struct nv_drm_crtc {
      * The filep using this crtc with DRM_IOCTL_NVIDIA_GRANT_PERMISSIONS.
      */
     struct drm_file *modeset_permission_filep;
+
+    struct NvKmsKapiVblankIntrCallback *vblankIntrCallback;
+
+    nv_kthread_q_item_t disable_vblank_q_item;
+    nv_kthread_q_item_t enable_vblank_q_item;
 
     struct drm_crtc base;
 };
@@ -85,33 +86,29 @@ struct nv_drm_flip {
      */
     struct drm_pending_vblank_event *event;
 
-    /**
-     * @pending_events
-     *
-     * Number of HW events pending to signal completion of the state
-     * update.
-     */
-    uint32_t pending_events;
+/**
+ * @plane_mask
+ *
+ * Bitmask of drm_plane_mask(plane) of planes attached to the completion of
+ * the state update.
+ */
+uint32_t plane_mask;
 
-    /**
-     * @list_entry:
-     *
-     * Entry on the per-CRTC &nv_drm_crtc.flip_list. Protected by
-     * &nv_drm_crtc.flip_list_lock.
-     */
-    struct list_head list_entry;
+/**
+ * @pending_events_plane_mask
+ *
+ * Bitmask of drm_plane_mask(plane) of planes for which HW events are
+ * pending before signaling the completion of the state update.
+ */
+uint32_t pending_events_plane_mask;
 
-    /**
-     * @deferred_flip_list
-     *
-     * List flip objects whose processing is deferred until processing of
-     * this flip object. Protected by &nv_drm_crtc.flip_list_lock.
-     * nv_drm_atomic_commit() gets last flip object from
-     * nv_drm_crtc:flip_list and add deferred flip objects into
-     * @deferred_flip_list, __nv_drm_handle_flip_event() processes
-     * @deferred_flip_list.
-     */
-    struct list_head deferred_flip_list;
+/**
+ * @list_entry:
+ *
+ * Entry on the per-CRTC &nv_drm_crtc.flip_list. Protected by
+ * &nv_drm_crtc.vblank_q_lock.
+ */
+struct list_head list_entry;
 };
 
 struct nv_drm_crtc_state {
@@ -164,6 +161,8 @@ struct nv_drm_plane {
      */
     enum NvKmsCompositionBlendingMode defaultCompositionMode;
 
+    NvU32 head;
+
     /**
      * @layer_idx
      *
@@ -184,6 +183,7 @@ struct nv_drm_plane_state {
     struct drm_plane_state base;
     s32 __user *fd_user_ptr;
     enum NvKmsInputColorSpace input_colorspace;
+    enum NvKmsInputColorRange input_colorrange;
 #if defined(NV_DRM_HAS_HDR_OUTPUT_METADATA)
     struct drm_property_blob *hdr_output_metadata;
 #endif
@@ -226,46 +226,29 @@ struct nv_drm_crtc *nv_drm_crtc_lookup(struct nv_drm_device *nv_dev, NvU32 head)
     return NULL;
 }
 
+static inline
+struct nv_drm_plane *nv_drm_plane_lookup(struct nv_drm_device *nv_dev, NvU32 head, NvU32 layer)
+{
+    struct drm_plane *plane;
+    nv_drm_for_each_plane(plane, nv_dev->dev) {
+        struct nv_drm_plane *nv_plane = to_nv_plane(plane);
+
+        if ((nv_plane->head == head) && (nv_plane->layer_idx == layer))  {
+            return nv_plane;
+        }
+    }
+    return NULL;
+}
+
 /**
  * nv_drm_crtc_enqueue_flip - Enqueue nv_drm_flip object to flip_list of crtc.
  */
 static inline void nv_drm_crtc_enqueue_flip(struct nv_drm_crtc *nv_crtc,
                                             struct nv_drm_flip *nv_flip)
 {
-    spin_lock(&nv_crtc->flip_list_lock);
+    spin_lock(&nv_crtc->base.dev->event_lock);
     list_add(&nv_flip->list_entry, &nv_crtc->flip_list);
-    spin_unlock(&nv_crtc->flip_list_lock);
-}
-
-/**
- * nv_drm_crtc_dequeue_flip - Dequeue nv_drm_flip object to flip_list of crtc.
- */
-static inline
-struct nv_drm_flip *nv_drm_crtc_dequeue_flip(struct nv_drm_crtc *nv_crtc)
-{
-    struct nv_drm_flip *nv_flip = NULL;
-    uint32_t pending_events = 0;
-
-    spin_lock(&nv_crtc->flip_list_lock);
-    nv_flip = list_first_entry_or_null(&nv_crtc->flip_list,
-                                       struct nv_drm_flip, list_entry);
-    if (likely(nv_flip != NULL)) {
-        /*
-         * Decrement pending_event count and dequeue flip object if
-         * pending_event count becomes 0.
-         */
-        pending_events = --nv_flip->pending_events;
-        if (!pending_events) {
-            list_del(&nv_flip->list_entry);
-        }
-    }
-    spin_unlock(&nv_crtc->flip_list_lock);
-
-    if (WARN_ON(nv_flip == NULL) || pending_events) {
-        return NULL;
-    }
-
-    return nv_flip;
+    spin_unlock(&nv_crtc->base.dev->event_lock);
 }
 
 void nv_drm_enumerate_crtcs_and_planes(

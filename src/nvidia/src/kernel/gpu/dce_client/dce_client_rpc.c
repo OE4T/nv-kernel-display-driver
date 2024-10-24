@@ -334,8 +334,8 @@ void dceclientHandleAsyncRpcCallback
                 NV_STATUS          nvStatus     = NV_OK;
 
                 // Get the notification list that contains this event.
-                NV_ASSERT(CliGetEventInfo(rpc_params->hClient,
-                          rpc_params->hEvent, &pEvent));
+                NV_CHECK_OR_RETURN_VOID(LEVEL_ERROR, CliGetEventInfo(rpc_params->hClient,
+                                                                     rpc_params->hEvent, &pEvent));
 
                 if (pEvent->pNotifierShare != NULL)
                     pNotifyList = pEvent->pNotifierShare->pEventList;

@@ -312,7 +312,7 @@ GetColorSpaceAndColorRange(
     if (!nvChooseCurrentColorSpaceAndRangeEvo(pOneArbitraryDpyEvo,
                                               &pProposedApiHead->timings,
                                               pProposedPrimaryHead->hdmiFrlBpc,
-                                              pProposedApiHead->tf,
+                                              pProposedApiHead->colorimetry,
                                               requestedColorSpace,
                                               requestedColorRange,
                                               &pProposedApiHead->attributes.colorSpace,
@@ -490,6 +490,7 @@ InitNVProposedModeSetStateOneApiHead(
     pProposedApiHead->infoFrame =
         pDispEvo->apiHeadState[apiHead].infoFrame;
     pProposedApiHead->tf = pDispEvo->apiHeadState[apiHead].tf;
+    pProposedApiHead->colorimetry = pDispEvo->apiHeadState[apiHead].colorimetry;
     pProposedApiHead->viewPortPointIn =
         pDispEvo->apiHeadState[apiHead].viewPortPointIn;
 
@@ -544,6 +545,7 @@ InitProposedModeSetHwState(const NVDevEvoRec *pDevEvo,
             for (NvU32 head = 0; head < pDevEvo->numHeads; head++) {
                 NvU32 layer;
                 NVFlipEvoHwState *pFlip = &pProposed->sd[sd].head[head].flip;
+                pFlip->dirty.colorimetry = TRUE;
                 for (layer = 0; layer < pDevEvo->head[head].numLayers; layer++) {
                     pFlip->dirty.layer[layer] = TRUE;
                 }
@@ -617,6 +619,7 @@ AssignProposedModeSetNVFlipEvoHwState(
     if (commit) {
         NvU32 layer;
 
+        pFlip->dirty.colorimetry = TRUE;
         for (layer = 0; layer < pDevEvo->head[head].numLayers; layer++) {
             pFlip->dirty.layer[layer] = TRUE;
         }
@@ -1172,9 +1175,8 @@ AssignProposedModeSetHwState(NVDevEvoRec *pDevEvo,
                 pProposedApiHead->lut.input.specified = FALSE;
             }
 
-            if (pRequestHead->outputColorSpace.specified) {
-                pProposedApiHead->outputColorSpace =
-                    pRequestHead->outputColorSpace.val;
+            if (pRequestHead->flip.colorimetry.specified) {
+                pProposedApiHead->colorimetry = pRequestHead->flip.colorimetry.val;
 
                 // A specified output color space takes precedence over a
                 // specified custom OLUT. Setting the lut.output as follows
@@ -2343,6 +2345,14 @@ ApplyProposedModeSetStateOneApiHeadShutDown(
      */
     DisableActiveCoreRGSyncObjects(pDispEvo, apiHead,
                                    &pWorkArea->modesetUpdateState.updateState);
+    {
+        NVVBlankIntrCallbackRec *pCallback;
+        nvListForEachEntry(pCallback, &pDispEvo->vblankIntrCallbackList[apiHead],
+                           vblankIntrCallbackListEntry) {
+            nvEvoUnregisterVBlankEvent(pDispEvo, pCallback->rmVBlankCallbackHandle);
+            pCallback->rmVBlankCallbackHandle = 0;
+        }
+    }
 
     if (pApiHeadState->rmVBlankCallbackHandle != 0) {
         nvRmRemoveVBlankCallback(pDispEvo,
@@ -2413,6 +2423,9 @@ ApplyProposedModeSetStateOneDispFlip(
             }
         }
 
+        pDispEvo->apiHeadState[apiHead].colorimetry =
+            pProposedApiHead->colorimetry;
+
         pDispEvo->apiHeadState[apiHead].viewPortPointIn =
             pProposedApiHead->viewPortPointIn;
     }
@@ -2470,7 +2483,7 @@ ApplyProposedModeSetHwStateOneHeadPreUpdate(
         nvEvoColorSpaceBpcToPixelDepth(pProposedApiHead->attributes.colorSpace,
                                        pProposedApiHead->attributes.colorBpc);
     pHeadState->audio = pProposedHead->audio;
-    pHeadState->outputColorSpace = pProposedApiHead->outputColorSpace;
+    pHeadState->colorimetry = pProposedApiHead->colorimetry;
 
     /* Update current LUT to hardware */
     nvEvoSetLUTContextDma(pDispEvo, head, updateState);
@@ -2487,6 +2500,7 @@ ApplyProposedModeSetHwStateOneHeadPreUpdate(
     /* Update hardware's current colorSpace and colorRange */
     nvUpdateCurrentHardwareColorSpaceAndRangeEvo(pDispEvo,
                                                  head,
+                                                 pProposedApiHead->colorimetry,
                                                  pProposedApiHead->attributes.colorSpace,
                                                  pProposedApiHead->attributes.colorRange,
                                                  updateState);
@@ -2652,8 +2666,18 @@ ApplyProposedModeSetStateOneApiHeadPreUpdate(
                 VBlankCallback, (void *)(NvUPtr)apiHead);
     }
 
+    {
+        NVVBlankIntrCallbackRec *pCallback;
+        nvListForEachEntry(pCallback, &pDispEvo->vblankIntrCallbackList[apiHead],
+                           vblankIntrCallbackListEntry) {
+            pCallback->rmVBlankCallbackHandle =
+                nvEvoRegisterVBlankEvent(pDispEvo, proposedPrimaryHead, pCallback);
+        }
+    }
+
     pApiHeadState->attributes = pProposedApiHead->attributes;
     pApiHeadState->tf = pProposedApiHead->tf;
+    pApiHeadState->colorimetry = pProposedApiHead->colorimetry;
     pApiHeadState->hs10bpcHint = pProposedApiHead->hs10bpcHint;
 
     if (nvPopCount32(pProposedApiHead->hwHeadsMask) > 1) {
@@ -3783,6 +3807,58 @@ void nvApiHeadUnregisterVBlankCallback(NVDispEvoPtr pDispEvo,
                                  pApiHeadState->rmVBlankCallbackHandle);
         pApiHeadState->rmVBlankCallbackHandle = 0;
     }
+}
+
+NVVBlankIntrCallbackRec*
+nvApiHeadRegisterVBlankIntrCallback(NVDispEvoPtr pDispEvo,
+                                    const NvU32 apiHead,
+                                    NVVBlankIntrCallbackProc pCallback,
+                                    NvU64 param1,
+                                    NvU64 param2)
+{
+    const NvU32 head = nvGetPrimaryHwHead(pDispEvo, apiHead);
+    NVVBlankIntrCallbackRec *pVBlankIntrCallback = NULL;
+
+    pVBlankIntrCallback = nvCalloc(1, sizeof(*pVBlankIntrCallback));
+    if (pVBlankIntrCallback == NULL) {
+        return NULL;
+    }
+
+    pVBlankIntrCallback->pCallback = pCallback;
+    pVBlankIntrCallback->apiHead = apiHead;
+    pVBlankIntrCallback->param1 = param1;
+    pVBlankIntrCallback->param2 = param2;
+    pVBlankIntrCallback->ref_ptr = nvkms_alloc_ref_ptr(pVBlankIntrCallback);
+
+    nvListAppend(&pVBlankIntrCallback->vblankIntrCallbackListEntry,
+                 &pDispEvo->vblankIntrCallbackList[apiHead]);
+
+    if (pDispEvo->pDevEvo->coreInitMethodsPending) {
+        return pVBlankIntrCallback;
+    }
+    if (head != NV_INVALID_HEAD) {
+        pVBlankIntrCallback->rmVBlankCallbackHandle =
+            nvEvoRegisterVBlankEvent(pDispEvo, head, pVBlankIntrCallback);
+    }
+
+    return pVBlankIntrCallback;
+}
+
+void nvApiHeadUnregisterVBlankIntrCallback(NVDispEvoPtr pDispEvo,
+                                           NVVBlankIntrCallbackRec *pCallback)
+{
+    nvAssert((nvGetPrimaryHwHead(pDispEvo, pCallback->apiHead) != NV_INVALID_HEAD)||
+                (pCallback->rmVBlankCallbackHandle == 0));
+
+    // If there are no more callbacks, disable the RM-level callback
+    if (pCallback->rmVBlankCallbackHandle != 0) {
+        nvEvoUnregisterVBlankEvent(pDispEvo, pCallback->rmVBlankCallbackHandle);
+        pCallback->rmVBlankCallbackHandle = 0;
+    }
+
+    nvListDel(&pCallback->vblankIntrCallbackListEntry);
+    nvkms_free_ref_ptr(pCallback->ref_ptr);
+    nvFree(pCallback);
 }
 
 /*!

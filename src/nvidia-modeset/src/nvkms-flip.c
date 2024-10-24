@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2014 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2014 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -126,6 +126,12 @@ static NvBool UpdateProposedFlipStateOneApiHead(
     const NVDispApiHeadStateEvoRec *pApiHeadState =
         &pDispEvo->apiHeadState[apiHead];
 
+
+    if (pParams->colorimetry.specified) {
+        pProposedApiHead->dirty.hdr = TRUE;
+        pProposedApiHead->hdr.colorimetry = pParams->colorimetry.val;
+    }
+
     if (pParams->tf.specified) {
         const NVDpyEvoRec *pDpyEvo =
             nvGetOneArbitraryDpyEvo(pApiHeadState->activeDpys, pDispEvo);
@@ -156,7 +162,7 @@ static NvBool UpdateProposedFlipStateOneApiHead(
         if (!nvChooseCurrentColorSpaceAndRangeEvo(pDpyEvo,
                                                   &pApiHeadState->timings,
                                                   pDispEvo->headState[primaryHead].hdmiFrlBpc,
-                                                  pParams->tf.val,
+                                                  pProposedApiHead->hdr.colorimetry,
                                                   pDpyEvo->requestedColorSpace,
                                                   pDpyEvo->requestedColorRange,
                                                   &pProposedApiHead->hdr.colorSpace,
@@ -353,6 +359,7 @@ static void InitNvKmsFlipWorkArea(const NVDevEvoRec *pDevEvo,
                 &pDispEvo->apiHeadState[apiHead];
 
             pProposedApiHead->hdr.tf = pApiHeadState->tf;
+            pProposedApiHead->hdr.colorimetry = pApiHeadState->colorimetry;
             pProposedApiHead->hdr.colorSpace =
                 pApiHeadState->attributes.colorSpace;
             pProposedApiHead->hdr.colorBpc =
@@ -398,6 +405,7 @@ static void FlipEvoOneApiHead(NVDispEvoRec *pDispEvo,
             nvUpdateCurrentHardwareColorSpaceAndRangeEvo(
                 pDispEvo,
                 head,
+                pProposedApiHead->hdr.colorimetry,
                 pProposedApiHead->hdr.colorSpace,
                 pProposedApiHead->hdr.colorRange,
                 pUpdateState);
@@ -419,6 +427,8 @@ static void FlipEvoOneApiHead(NVDispEvoRec *pDispEvo,
         }
 
         pApiHeadState->tf = pProposedApiHead->hdr.tf;
+
+        pApiHeadState->colorimetry = pProposedApiHead->hdr.colorimetry;
 
         nvUpdateInfoFrames(pDpyEvo);
     }

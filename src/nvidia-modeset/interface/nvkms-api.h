@@ -268,6 +268,8 @@ enum NvKmsIoctlCommand {
     NVKMS_IOCTL_DISABLE_VBLANK_SYNC_OBJECT,
     NVKMS_IOCTL_NOTIFY_VBLANK,
     NVKMS_IOCTL_QUERY_VT_FB_DATA,
+    NVKMS_IOCTL_REGISTER_VBLANK_INTR_CALLBACK,
+    NVKMS_IOCTL_UNREGISTER_VBLANK_INTR_CALLBACK,
 };
 
 
@@ -747,6 +749,14 @@ struct NvKmsFlipCommonParams {
         enum NvKmsOutputTf val;
         NvBool specified;
     } tf;
+
+    /*
+     * Specifies required output color space value.
+     */
+    struct {
+        NvBool specified;
+        enum NvKmsOutputColorimetry val;
+    } colorimetry;
 
     struct {
         struct {
@@ -1760,22 +1770,6 @@ enum NvKmsAllowAdaptiveSync {
     NVKMS_ALLOW_ADAPTIVE_SYNC_ALL,
 };
 
-/*! Values for the NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE attribute. */
-enum NvKmsDpyAttributeRequestedColorSpaceValue {
-    NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_RGB = 0,
-    NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_YCbCr422 = 1,
-    NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_YCbCr444 = 2,
-};
-
-/*!
- * Values for the NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_RANGE and
- * NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_RANGE attributes.
- */
-enum NvKmsDpyAttributeColorRangeValue {
-    NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_FULL = 0,
-    NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_LIMITED = 1,
-};
-
 struct NvKmsSetModeOneHeadRequest {
     /*!
      * The list of dpys to drive with this head; or, empty to disable
@@ -1818,18 +1812,6 @@ struct NvKmsSetModeOneHeadRequest {
      * specified input/output colorspaces will be used instead.
      */
     struct NvKmsSetLutCommonParams lut;
-
-    /*!
-     * If specified, this will determine the gamma encoding of the output.
-     * Note: this will take precendence over a custom output lut ramp if that
-     * is also supplied via the `lut` member variable above.
-     * Note: if neither this nor a custom OLUT is specified, the driver will
-     * default to an Identity OLUT (i.e. no regamma).
-     */
-     struct {
-         NvBool specified;
-         enum NvKmsOutputColorSpace val;
-     } outputColorSpace;
 
     /*!
      * Describe the surfaces to present on this head.
@@ -4065,6 +4047,42 @@ struct NvKmsNotifyVblankReply {
 struct NvKmsNotifyVblankParams {
     struct NvKmsNotifyVblankRequest request; /*! in */
     struct NvKmsNotifyVblankReply reply;     /*! out */
+};
+
+struct NvKmsRegisterVblankIntrCallbackRequest {
+    NvKmsDeviceHandle deviceHandle;
+    NvKmsDispHandle dispHandle;
+    NvU32 head;
+
+    NVVBlankIntrCallbackProc pCallback;
+    NvU64 param1;
+    NvU64 param2;
+};
+
+struct NvKmsRegisterVblankIntrCallbackReply {
+    NvKmsVblankIntrCallbackHandle callbackHandle;
+};
+
+struct NvKmsRegisterVblankIntrCallbackParams {
+    struct NvKmsRegisterVblankIntrCallbackRequest request; /*! in */
+    struct NvKmsRegisterVblankIntrCallbackReply reply;     /*! out */
+};
+
+struct NvKmsUnregisterVblankIntrCallbackRequest {
+    NvKmsDeviceHandle deviceHandle;
+    NvKmsDispHandle dispHandle;
+    NvU32 head;
+
+    NvKmsVblankIntrCallbackHandle callbackHandle;
+};
+
+struct NvKmsUnregisterVblankIntrCallbackReply {
+    NvU32 padding;
+};
+
+struct NvKmsUnregisterVblankIntrCallbackParams {
+    struct NvKmsUnregisterVblankIntrCallbackRequest request; /*! in */
+    struct NvKmsUnregisterVblankIntrCallbackReply reply;     /*! out */
 };
 
 #endif /* NVKMS_API_H */

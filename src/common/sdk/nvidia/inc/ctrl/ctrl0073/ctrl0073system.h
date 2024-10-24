@@ -845,6 +845,175 @@ typedef struct NV0073_CTRL_SYSTEM_ACPI_SUBSYSTEM_ACTIVATED_PARAMS {
 
 #define NV0073_CTRL_CMD_SYSTEM_ACPI_SUBSYSTEM_ACTIVATED (0x73015cU) /* finn: Evaluated from "(FINN_NV04_DISPLAY_COMMON_SYSTEM_INTERFACE_ID << 8) | NV0073_CTRL_SYSTEM_ACPI_SUBSYSTEM_ACTIVATED_PARAMS_MESSAGE_ID" */
 
+/*
+ * To support RMCTRLs for BOARDOBJGRP_E255, we were required to increase the
+ * XAPI limit to 16K. It was observed that XP does NOT allow the static array
+ * size greater then 10K and this was causing the DVS failure. So we are using
+ * the OLD XAPI value i.e. 4K for NV0073_CTRL_SYSTEM_SRM_BUFFER_MAX while
+ * internally we are using the new updated XAPI value i.e. 16K.
+ */
+#define XAPI_ENVELOPE_MAX_PAYLOAD_SIZE_OLD              4096U
+
+/*
+ * NV0073_CTRL_SYSTEM_SRM_CHUNK
+ *
+ * Several control commands require an SRM, which may be larger than the
+ * available buffer. Therefore, this structure is used to transfer the needed
+ * data.
+ *
+ *   startByte
+ *     Index of the byte in the SRM buffer at which the current chunk of data
+ *     starts. If this value is 0, it indicates the start of a new SRM. A
+ *     value other than 0 indicates additional data for an SRM.
+ *   numBytes
+ *     Size in bytes of the current chunk of data.
+ *   totalBytes
+ *     Size in bytes of the entire SRM.
+ *   srmBuffer
+ *     Buffer containing the current chunk of SRM data.
+ */
+/* Set max SRM size to the XAPI max, minus some space for other fields */
+#define NV0073_CTRL_SYSTEM_SRM_BUFFER_MAX               (0xe00U) /* finn: Evaluated from "(XAPI_ENVELOPE_MAX_PAYLOAD_SIZE_OLD - 512)" */
+
+typedef struct NV0073_CTRL_SYSTEM_SRM_CHUNK {
+    NvU32 startByte;
+    NvU32 numBytes;
+    NvU32 totalBytes;
+
+    /* C form: NvU8    srmBuffer[NV0073_CTRL_SYSTEM_SRM_BUFFER_MAX]; */
+    NvU8  srmBuffer[NV0073_CTRL_SYSTEM_SRM_BUFFER_MAX];
+} NV0073_CTRL_SYSTEM_SRM_CHUNK;
+
+/*
+ * NV0073_CTRL_CMD_SYSTEM_VALIDATE_SRM
+ *
+ * Instructs the RM to validate the SRM for use by HDCP revocation. The SRM
+ * may be larger than the buffer provided by the API. In that case, the SRM is
+ * sent in chunks no larger than NV0073_CTRL_SYSTEM_SRM_BUFFER_MAX bytes.
+ *
+ * Upon completion of the validation, which is an asynchronous operation, the
+ * client will receive a <PLACE_HOLDER_EVENT> event. Alternatively, the client
+ * may poll for completion of SRM validation via
+ * NV0073_CTRL_CMD_SYSTEM_GET_SRM_STATUS.
+ *
+ *   subDeviceInstance
+ *     This parameter specifies the subdevice instance within the
+ *     NV04_DISPLAY_COMMON parent device to which the operation should be
+ *     directed.  This parameter must specify a value between zero and the
+ *     total number of subdevices within the parent device.  This parameter
+ *     should be set to zero for default behavior.
+ *   srm
+ *     A chunk of the SRM.
+ *
+ * Possible status values returned are:
+ *   NV_OK
+ *   NV_ERR_NOT_SUPPORTED
+ *   NV_ERR_NOT_READY
+ *   NV_ERR_INVALID_ARGUMENT
+ *   NV_WARN_MORE_PROCESSING_REQUIRED
+ *   NV_ERR_INSUFFICIENT_RESOURCES
+ */
+#define NV0073_CTRL_CMD_SYSTEM_VALIDATE_SRM (0x73015eU) /* finn: Evaluated from "(FINN_NV04_DISPLAY_COMMON_SYSTEM_INTERFACE_ID << 8) | NV0073_CTRL_SYSTEM_VALIDATE_SRM_PARAMS_MESSAGE_ID" */
+
+#define NV0073_CTRL_SYSTEM_VALIDATE_SRM_PARAMS_MESSAGE_ID (0x5EU)
+
+typedef struct NV0073_CTRL_SYSTEM_VALIDATE_SRM_PARAMS {
+    NvU32                        subDeviceInstance;
+    NV0073_CTRL_SYSTEM_SRM_CHUNK srm;
+} NV0073_CTRL_SYSTEM_VALIDATE_SRM_PARAMS;
+
+/*
+ * NV0073_CTRL_CMD_SYSTEM_GET_SRM_STATUS
+ *
+ * Retrieves the status of the request to validate the SRM. If a request to
+ * validate an SRM is still pending, NV_ERR_NOT_READY will be
+ * returned and the status will not be updated.
+ *
+ *   subDeviceInstance
+ *     This parameter specifies the subdevice instance within the
+ *     NV04_DISPLAY_COMMON parent device to which the operation should be
+ *     directed.  This parameter must specify a value between zero and the
+ *     total number of subdevices within the parent device.  This parameter
+ *     should be set to zero for default behavior.
+ *   status
+ *     Result of the last SRM validation request.
+ *
+ * Possible status values returned are:
+ *   NV_OK
+ *   NV_ERR_NOT_SUPPORTED
+ *   NV_ERR_NOT_READY
+ */
+#define NV0073_CTRL_CMD_SYSTEM_GET_SRM_STATUS (0x73015fU) /* finn: Evaluated from "(FINN_NV04_DISPLAY_COMMON_SYSTEM_INTERFACE_ID << 8) | NV0073_CTRL_SYSTEM_GET_SRM_STATUS_PARAMS_MESSAGE_ID" */
+
+typedef enum NV0073_CTRL_SYSTEM_SRM_STATUS {
+    NV0073_CTRL_SYSTEM_SRM_STATUS_OK = 0,      // Validation succeeded
+    NV0073_CTRL_SYSTEM_SRM_STATUS_FAIL = 1,        // Validation request failed
+    NV0073_CTRL_SYSTEM_SRM_STATUS_BAD_FORMAT = 2,  // Bad SRM format
+    NV0073_CTRL_SYSTEM_SRM_STATUS_INVALID = 3,      // Bad SRM signature
+} NV0073_CTRL_SYSTEM_SRM_STATUS;
+
+#define NV0073_CTRL_SYSTEM_GET_SRM_STATUS_PARAMS_MESSAGE_ID (0x5FU)
+
+typedef struct NV0073_CTRL_SYSTEM_GET_SRM_STATUS_PARAMS {
+    NvU32 subDeviceInstance;
+    NvU32 status;
+} NV0073_CTRL_SYSTEM_GET_SRM_STATUS_PARAMS;
+
+
+
+/*
+ * NV0073_CTRL_CMD_SYSTEM_HDCP_REVOCATION_CHECK
+ *
+ * Performs the HDCP revocation process. Given the supplied SRM, all attached
+ * devices will be checked to see if they are on the revocation list or not.
+ *
+ *   srm
+ *     The SRM to do the revocation check against. For SRMs larger than
+ *     NV0073_CTRL_SYSTEM_SRM_BUFFER_MAX, the caller will need to break up the
+ *     SRM into chunks and make multiple calls.
+ *
+ * Possible status values returned are:
+ *   NV_OK
+ *   NV_ERR_NOT_SUPPORTED
+ *   NV_ERR_NOT_READY
+ *   NV_ERR_INVALID_ARGUMENT
+ *   NV_WARN_MORE_PROCESSING_REQUIRED
+ *   NV_ERR_INSUFFICIENT_RESOURCES
+ */
+#define NV0073_CTRL_CMD_SYSTEM_HDCP_REVOCATION_CHECK (0x730161U) /* finn: Evaluated from "(FINN_NV04_DISPLAY_COMMON_SYSTEM_INTERFACE_ID << 8) | NV0073_CTRL_SYSTEM_HDCP_REVOCATE_PARAMS_MESSAGE_ID" */
+
+#define NV0073_CTRL_SYSTEM_HDCP_REVOCATE_PARAMS_MESSAGE_ID (0x61U)
+
+typedef struct NV0073_CTRL_SYSTEM_HDCP_REVOCATE_PARAMS {
+    NV0073_CTRL_SYSTEM_SRM_CHUNK srm;
+} NV0073_CTRL_SYSTEM_HDCP_REVOCATE_PARAMS;
+
+/*
+ * NV0073_CTRL_CMD_UPDATE_SRM
+ *
+ * Updates the SRM used by RM for HDCP revocation checks. The SRM must have
+ * been previously validated as authentic.
+ *
+ *   srm
+ *     The SRM data. For SRMs larger than NV0073_CTRL_SYSTEM_SRM_BUFFER_MAX,
+ *     the caller will need to break up the SRM into chunks and make multiple
+ *     calls.
+ *
+ * Possible status values returned are:
+ *   NV_OK
+ *   NV_ERR_NOT_SUPPORTED
+ *   NV_ERR_NOT_READY
+ *   NV_ERR_INVALID_ARGUMENT
+ *   NV_WARN_MORE_PROCESSING_REQUIRED
+ *   NV_ERR_INSUFFICIENT_RESOURCES
+ */
+#define NV0073_CTRL_CMD_SYSTEM_UPDATE_SRM (0x730162U) /* finn: Evaluated from "(FINN_NV04_DISPLAY_COMMON_SYSTEM_INTERFACE_ID << 8) | NV0073_CTRL_SYSTEM_UPDATE_SRM_PARAMS_MESSAGE_ID" */
+
+#define NV0073_CTRL_SYSTEM_UPDATE_SRM_PARAMS_MESSAGE_ID (0x62U)
+
+typedef struct NV0073_CTRL_SYSTEM_UPDATE_SRM_PARAMS {
+    NV0073_CTRL_SYSTEM_SRM_CHUNK srm;
+} NV0073_CTRL_SYSTEM_UPDATE_SRM_PARAMS;
 
 /*
  * NV0073_CTRL_SYSTEM_CONNECTOR_INFO

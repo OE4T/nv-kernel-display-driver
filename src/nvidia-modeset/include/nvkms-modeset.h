@@ -75,6 +75,16 @@ void nvApiHeadGetScanLine(const NVDispEvoRec *pDispEvo,
                           NvU16 *pScanLine,
                           NvBool *pInBlankingPeriod);
 
+NVVBlankIntrCallbackRec*
+nvApiHeadRegisterVBlankIntrCallback(NVDispEvoPtr pDispEvo,
+                                    const NvU32 apiHead,
+                                    NVVBlankIntrCallbackProc pCallback,
+                                    NvU64 param1,
+                                    NvU64 param2);
+
+void nvApiHeadUnregisterVBlankIntrCallback(NVDispEvoPtr pDispEvo,
+                                           NVVBlankIntrCallbackRec *pCallback);
+
 #ifdef __cplusplus
 };
 #endif

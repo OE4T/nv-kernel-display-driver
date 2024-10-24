@@ -127,7 +127,6 @@ NV_CONFTEST_TYPE_COMPILE_TESTS += drm_crtc_atomic_check_has_atomic_state_arg
 NV_CONFTEST_TYPE_COMPILE_TESTS += drm_gem_object_vmap_has_map_arg
 NV_CONFTEST_TYPE_COMPILE_TESTS += drm_plane_atomic_check_has_atomic_state_arg
 NV_CONFTEST_TYPE_COMPILE_TESTS += drm_device_has_pdev
-NV_CONFTEST_TYPE_COMPILE_TESTS += drm_crtc_state_has_no_vblank
 NV_CONFTEST_TYPE_COMPILE_TESTS += drm_mode_config_has_allow_fb_modifiers
 NV_CONFTEST_TYPE_COMPILE_TESTS += drm_has_hdr_output_metadata
 NV_CONFTEST_TYPE_COMPILE_TESTS += dma_resv_add_fence

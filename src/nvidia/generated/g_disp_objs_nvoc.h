@@ -7,7 +7,7 @@ extern "C" {
 #endif
 
 /*
- * SPDX-FileCopyrightText: Copyright (c) 1993-2023 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 1993-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -59,6 +59,9 @@ extern "C" {
 #define DISPLAY_PRIVILEGED PRIVILEGED
 
 #include "ctrl/ctrl0073.h"
+#include "ctrl/ctrl0073/ctrl0073system.h"
+#include "ctrl/ctrl0073/ctrl0073dp.h"
+#include "ctrl/ctrl0073/ctrl0073specific.h"
 #include "ctrl/ctrl5070/ctrl5070event.h"
 #include "ctrl/ctrl5070/ctrl5070or.h"
 #include "ctrl/ctrl5070/ctrl5070seq.h"
@@ -1301,6 +1304,16 @@ struct DispCommon {
     struct Notifier *__nvoc_pbase_Notifier;
     struct DisplayApi *__nvoc_pbase_DisplayApi;
     struct DispCommon *__nvoc_pbase_DispCommon;
+    NV_STATUS (*__dispcmnCtrlCmdSpecificGetHdcpState__)(struct DispCommon *, NV0073_CTRL_SPECIFIC_GET_HDCP_STATE_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSpecificHdcpCtrl__)(struct DispCommon *, NV0073_CTRL_SPECIFIC_HDCP_CTRL_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSpecificGetHdcpRepeaterInfo__)(struct DispCommon *, NV0073_CTRL_SPECIFIC_GET_HDCP_REPEATER_INFO_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSpecificGetHdcpDiagnostics__)(struct DispCommon *, NV0073_CTRL_SPECIFIC_GET_HDCP_DIAGNOSTICS_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSpecificHdcpKsvListValidate__)(struct DispCommon *, NV0073_CTRL_SPECIFIC_HDCP_KSVLIST_VALIDATE_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSpecificHdcpUpdate__)(struct DispCommon *, NV0073_CTRL_SPECIFIC_HDCP_UPDATE_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSystemValidateSrm__)(struct DispCommon *, NV0073_CTRL_SYSTEM_VALIDATE_SRM_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSystemGetSrmStatus__)(struct DispCommon *, NV0073_CTRL_SYSTEM_GET_SRM_STATUS_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSystemHdcpRevocationCheck__)(struct DispCommon *, NV0073_CTRL_SYSTEM_HDCP_REVOCATE_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdSystemUpdateSrm__)(struct DispCommon *, NV0073_CTRL_SYSTEM_UPDATE_SRM_PARAMS *);
     NV_STATUS (*__dispcmnCtrlCmdSystemGetCapsV2__)(struct DispCommon *, NV0073_CTRL_SYSTEM_GET_CAPS_V2_PARAMS *);
     NV_STATUS (*__dispcmnCtrlCmdSystemGetNumHeads__)(struct DispCommon *, NV0073_CTRL_SYSTEM_GET_NUM_HEADS_PARAMS *);
     NV_STATUS (*__dispcmnCtrlCmdSystemGetScanline__)(struct DispCommon *, NV0073_CTRL_SYSTEM_GET_SCANLINE_PARAMS *);
@@ -1391,6 +1404,7 @@ struct DispCommon {
     NV_STATUS (*__dispcmnCtrlCmdDpConfigMacroPad__)(struct DispCommon *, NV0073_CTRL_CMD_DP_CONFIG_MACRO_PAD_PARAMS *);
     NV_STATUS (*__dispcmnCtrlCmdDpSetPreemphasisDrivecurrentPostcursor2Data__)(struct DispCommon *, NV0073_CTRL_DP_SET_PREEMPHASIS_DRIVECURRENT_POSTCURSOR2_DATA_PARAMS *);
     NV_STATUS (*__dispcmnCtrlCmdDpGetPreemphasisDrivecurrentPostcursor2Data__)(struct DispCommon *, NV0073_CTRL_DP_GET_PREEMPHASIS_DRIVECURRENT_POSTCURSOR2_DATA_PARAMS *);
+    NV_STATUS (*__dispcmnCtrlCmdDpSetEcf__)(struct DispCommon *, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *);
     NV_STATUS (*__dispcmnCtrlCmdSpecificGetRegionalCrcs__)(struct DispCommon *, NV0073_CTRL_CMD_SPECIFIC_GET_REGIONAL_CRCS_PARAMS *);
     NvBool (*__dispcmnShareCallback__)(struct DispCommon *, struct RsClient *, struct RsResourceRef *, RS_SHARE_POLICY *);
     NV_STATUS (*__dispcmnCheckMemInterUnmap__)(struct DispCommon *, NvBool);
@@ -1450,6 +1464,16 @@ NV_STATUS __nvoc_objCreate_DispCommon(DispCommon**, Dynamic*, NvU32, struct CALL
 #define __objCreate_DispCommon(ppNewObj, pParent, createFlags, arg_pCallContext, arg_pParams) \
     __nvoc_objCreate_DispCommon((ppNewObj), staticCast((pParent), Dynamic), (createFlags), arg_pCallContext, arg_pParams)
 
+#define dispcmnCtrlCmdSpecificGetHdcpState(pDispCommon, pParams) dispcmnCtrlCmdSpecificGetHdcpState_DISPATCH(pDispCommon, pParams)
+#define dispcmnCtrlCmdSpecificHdcpCtrl(pDispCommon, pParams) dispcmnCtrlCmdSpecificHdcpCtrl_DISPATCH(pDispCommon, pParams)
+#define dispcmnCtrlCmdSpecificGetHdcpRepeaterInfo(pDispCommon, pParams) dispcmnCtrlCmdSpecificGetHdcpRepeaterInfo_DISPATCH(pDispCommon, pParams)
+#define dispcmnCtrlCmdSpecificGetHdcpDiagnostics(pDispCommon, pParams) dispcmnCtrlCmdSpecificGetHdcpDiagnostics_DISPATCH(pDispCommon, pParams)
+#define dispcmnCtrlCmdSpecificHdcpKsvListValidate(pDispCommon, pKsvListValidateParams) dispcmnCtrlCmdSpecificHdcpKsvListValidate_DISPATCH(pDispCommon, pKsvListValidateParams)
+#define dispcmnCtrlCmdSpecificHdcpUpdate(pDispCommon, pHdcpUpdateParams) dispcmnCtrlCmdSpecificHdcpUpdate_DISPATCH(pDispCommon, pHdcpUpdateParams)
+#define dispcmnCtrlCmdSystemValidateSrm(pDispCommon, pParams) dispcmnCtrlCmdSystemValidateSrm_DISPATCH(pDispCommon, pParams)
+#define dispcmnCtrlCmdSystemGetSrmStatus(pDispCommon, pParams) dispcmnCtrlCmdSystemGetSrmStatus_DISPATCH(pDispCommon, pParams)
+#define dispcmnCtrlCmdSystemHdcpRevocationCheck(pDispCommon, pParams) dispcmnCtrlCmdSystemHdcpRevocationCheck_DISPATCH(pDispCommon, pParams)
+#define dispcmnCtrlCmdSystemUpdateSrm(pDispCommon, pParams) dispcmnCtrlCmdSystemUpdateSrm_DISPATCH(pDispCommon, pParams)
 #define dispcmnCtrlCmdSystemGetCapsV2(pDispCommon, pCapsParams) dispcmnCtrlCmdSystemGetCapsV2_DISPATCH(pDispCommon, pCapsParams)
 #define dispcmnCtrlCmdSystemGetNumHeads(pDispCommon, pNumHeadsParams) dispcmnCtrlCmdSystemGetNumHeads_DISPATCH(pDispCommon, pNumHeadsParams)
 #define dispcmnCtrlCmdSystemGetScanline(pDispCommon, pScanlineParams) dispcmnCtrlCmdSystemGetScanline_DISPATCH(pDispCommon, pScanlineParams)
@@ -1540,6 +1564,7 @@ NV_STATUS __nvoc_objCreate_DispCommon(DispCommon**, Dynamic*, NvU32, struct CALL
 #define dispcmnCtrlCmdDpConfigMacroPad(pDispCommon, pParams) dispcmnCtrlCmdDpConfigMacroPad_DISPATCH(pDispCommon, pParams)
 #define dispcmnCtrlCmdDpSetPreemphasisDrivecurrentPostcursor2Data(pDispCommon, pParams) dispcmnCtrlCmdDpSetPreemphasisDrivecurrentPostcursor2Data_DISPATCH(pDispCommon, pParams)
 #define dispcmnCtrlCmdDpGetPreemphasisDrivecurrentPostcursor2Data(pDispCommon, pParams) dispcmnCtrlCmdDpGetPreemphasisDrivecurrentPostcursor2Data_DISPATCH(pDispCommon, pParams)
+#define dispcmnCtrlCmdDpSetEcf(pDispCommon, pCtrlEcfParams) dispcmnCtrlCmdDpSetEcf_DISPATCH(pDispCommon, pCtrlEcfParams)
 #define dispcmnCtrlCmdSpecificGetRegionalCrcs(pDispCommon, pParams) dispcmnCtrlCmdSpecificGetRegionalCrcs_DISPATCH(pDispCommon, pParams)
 #define dispcmnShareCallback(pResource, pInvokingClient, pParentRef, pSharePolicy) dispcmnShareCallback_DISPATCH(pResource, pInvokingClient, pParentRef, pSharePolicy)
 #define dispcmnCheckMemInterUnmap(pRmResource, bSubdeviceHandleProvided) dispcmnCheckMemInterUnmap_DISPATCH(pRmResource, bSubdeviceHandleProvided)
@@ -1567,6 +1592,66 @@ NV_STATUS __nvoc_objCreate_DispCommon(DispCommon**, Dynamic*, NvU32, struct CALL
 #define dispcmnGetNotificationShare(pNotifier) dispcmnGetNotificationShare_DISPATCH(pNotifier)
 #define dispcmnMap(pResource, pCallContext, pParams, pCpuMapping) dispcmnMap_DISPATCH(pResource, pCallContext, pParams, pCpuMapping)
 #define dispcmnGetOrAllocNotifShare(pNotifier, hNotifierClient, hNotifierResource, ppNotifShare) dispcmnGetOrAllocNotifShare_DISPATCH(pNotifier, hNotifierClient, hNotifierResource, ppNotifShare)
+NV_STATUS dispcmnCtrlCmdSpecificGetHdcpState_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_GET_HDCP_STATE_PARAMS *pParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSpecificGetHdcpState_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_GET_HDCP_STATE_PARAMS *pParams) {
+    return pDispCommon->__dispcmnCtrlCmdSpecificGetHdcpState__(pDispCommon, pParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSpecificHdcpCtrl_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_HDCP_CTRL_PARAMS *pParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSpecificHdcpCtrl_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_HDCP_CTRL_PARAMS *pParams) {
+    return pDispCommon->__dispcmnCtrlCmdSpecificHdcpCtrl__(pDispCommon, pParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSpecificGetHdcpRepeaterInfo_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_GET_HDCP_REPEATER_INFO_PARAMS *pParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSpecificGetHdcpRepeaterInfo_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_GET_HDCP_REPEATER_INFO_PARAMS *pParams) {
+    return pDispCommon->__dispcmnCtrlCmdSpecificGetHdcpRepeaterInfo__(pDispCommon, pParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSpecificGetHdcpDiagnostics_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_GET_HDCP_DIAGNOSTICS_PARAMS *pParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSpecificGetHdcpDiagnostics_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_GET_HDCP_DIAGNOSTICS_PARAMS *pParams) {
+    return pDispCommon->__dispcmnCtrlCmdSpecificGetHdcpDiagnostics__(pDispCommon, pParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSpecificHdcpKsvListValidate_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_HDCP_KSVLIST_VALIDATE_PARAMS *pKsvListValidateParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSpecificHdcpKsvListValidate_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_HDCP_KSVLIST_VALIDATE_PARAMS *pKsvListValidateParams) {
+    return pDispCommon->__dispcmnCtrlCmdSpecificHdcpKsvListValidate__(pDispCommon, pKsvListValidateParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSpecificHdcpUpdate_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_HDCP_UPDATE_PARAMS *pHdcpUpdateParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSpecificHdcpUpdate_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SPECIFIC_HDCP_UPDATE_PARAMS *pHdcpUpdateParams) {
+    return pDispCommon->__dispcmnCtrlCmdSpecificHdcpUpdate__(pDispCommon, pHdcpUpdateParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSystemValidateSrm_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_VALIDATE_SRM_PARAMS *pParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSystemValidateSrm_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_VALIDATE_SRM_PARAMS *pParams) {
+    return pDispCommon->__dispcmnCtrlCmdSystemValidateSrm__(pDispCommon, pParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSystemGetSrmStatus_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_GET_SRM_STATUS_PARAMS *pParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSystemGetSrmStatus_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_GET_SRM_STATUS_PARAMS *pParams) {
+    return pDispCommon->__dispcmnCtrlCmdSystemGetSrmStatus__(pDispCommon, pParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSystemHdcpRevocationCheck_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_HDCP_REVOCATE_PARAMS *pParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSystemHdcpRevocationCheck_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_HDCP_REVOCATE_PARAMS *pParams) {
+    return pDispCommon->__dispcmnCtrlCmdSystemHdcpRevocationCheck__(pDispCommon, pParams);
+}
+
+NV_STATUS dispcmnCtrlCmdSystemUpdateSrm_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_UPDATE_SRM_PARAMS *pParams);
+
+static inline NV_STATUS dispcmnCtrlCmdSystemUpdateSrm_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_UPDATE_SRM_PARAMS *pParams) {
+    return pDispCommon->__dispcmnCtrlCmdSystemUpdateSrm__(pDispCommon, pParams);
+}
+
 NV_STATUS dispcmnCtrlCmdSystemGetCapsV2_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_GET_CAPS_V2_PARAMS *pCapsParams);
 
 static inline NV_STATUS dispcmnCtrlCmdSystemGetCapsV2_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_SYSTEM_GET_CAPS_V2_PARAMS *pCapsParams) {
@@ -2105,6 +2190,12 @@ NV_STATUS dispcmnCtrlCmdDpGetPreemphasisDrivecurrentPostcursor2Data_IMPL(struct 
 
 static inline NV_STATUS dispcmnCtrlCmdDpGetPreemphasisDrivecurrentPostcursor2Data_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_DP_GET_PREEMPHASIS_DRIVECURRENT_POSTCURSOR2_DATA_PARAMS *pParams) {
     return pDispCommon->__dispcmnCtrlCmdDpGetPreemphasisDrivecurrentPostcursor2Data__(pDispCommon, pParams);
+}
+
+NV_STATUS dispcmnCtrlCmdDpSetEcf_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *pCtrlEcfParams);
+
+static inline NV_STATUS dispcmnCtrlCmdDpSetEcf_DISPATCH(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_DP_SET_ECF_PARAMS *pCtrlEcfParams) {
+    return pDispCommon->__dispcmnCtrlCmdDpSetEcf__(pDispCommon, pCtrlEcfParams);
 }
 
 NV_STATUS dispcmnCtrlCmdSpecificGetRegionalCrcs_IMPL(struct DispCommon *pDispCommon, NV0073_CTRL_CMD_SPECIFIC_GET_REGIONAL_CRCS_PARAMS *pParams);

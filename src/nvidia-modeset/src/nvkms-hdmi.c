@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2007 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2007 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -68,7 +68,7 @@ static inline const NVT_EDID_CEA861_INFO *GetExt861(const NVParsedEdidEvoRec *pP
  */
 static void CalculateVideoInfoFrameColorFormat(
     const NVAttributesSetEvoRec *pAttributesSet,
-    enum NvKmsOutputTf tf,
+    enum NvKmsOutputColorimetry colorimetry,
     const NvU32 hdTimings,
     NVT_VIDEO_INFOFRAME_CTRL *pCtrl,
     NVT_EDID_INFO *pEdidInfo)
@@ -76,10 +76,10 @@ static void CalculateVideoInfoFrameColorFormat(
     NvBool    sinkSupportsRGBQuantizationOverride = FALSE;
 
     /*
-     * If NVKMS_OUTPUT_TF_PQ is enabled, we expect the colorSpace is RGB.  This
+     * If NVKMS_OUTPUT_COLORIMETRY_BT2100 is enabled, we expect the colorSpace is RGB.  This
      * is enforced when the colorSpace is selected.
      */
-    nvAssert((tf != NVKMS_OUTPUT_TF_PQ) ||
+    nvAssert((colorimetry != NVKMS_OUTPUT_COLORIMETRY_BT2100) ||
              (pAttributesSet->colorSpace ==
                 NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_SPACE_RGB));
 
@@ -105,7 +105,7 @@ static void CalculateVideoInfoFrameColorFormat(
     // sets video infoframe colorimetry.
     switch (pAttributesSet->colorSpace) {
     case NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_SPACE_RGB:
-        if (tf == NVKMS_OUTPUT_TF_PQ) {
+        if (colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT2100) {
             pCtrl->colorimetry = NVT_COLORIMETRY_BT2020RGB;
         } else {
             pCtrl->colorimetry = NVT_COLORIMETRY_RGB;
@@ -525,7 +525,7 @@ static void SendVideoInfoFrame(const NVDispEvoRec *pDispEvo,
 
 
     CalculateVideoInfoFrameColorFormat(pAttributesSet,
-                                       pDispEvo->headState[head].tf,
+                                       pDispEvo->headState[head].colorimetry,
                                        hdTimings,
                                        &videoCtrl,
                                        pEdidInfo);

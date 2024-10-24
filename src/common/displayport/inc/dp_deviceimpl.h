@@ -34,6 +34,7 @@
 #include "dp_edid.h"
 #include "dp_list.h"
 #include "dp_auxdefs.h"
+#include "dp_qse.h"
 #include "dp_vrr.h"
 
 namespace DisplayPort

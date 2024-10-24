@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2016 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2016 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -164,6 +164,10 @@ static void FlipBaseToNull(NVDevEvoPtr pDevEvo)
             pRequestApiHead = &pFlipApiHead[i].flip;
             i++;
             nvAssert(i <= numFlipApiHeads);
+
+            pRequestApiHead->colorimetry.specified = TRUE;
+            pRequestApiHead->colorimetry.val = NVKMS_OUTPUT_COLORIMETRY_DEFAULT;
+
 
             for (layer = 0; layer < pDevEvo->apiHead[apiHead].numLayers; layer++) {
                 pRequestApiHead->layer[layer].surface.specified = TRUE;

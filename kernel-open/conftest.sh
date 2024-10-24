@@ -5767,24 +5767,6 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_MM_PASID_SET_PRESENT" "" "functions"
         ;;
 
-        drm_crtc_state_has_no_vblank)
-            #
-            # Determine if the 'drm_crtc_state' structure has 'no_vblank'.
-            #
-            # drm_crtc_state::no_vblank was added by commit b25c60af7a877
-            # ("drm/crtc: Add a generic infrastructure to fake VBLANK events")
-            # in 4.18.0-rc3 (2018-07-03).
-            #
-            CODE="
-            #include <drm/drm_crtc.h>
-            void conftest_drm_crtc_state_has_no_vblank(void) {
-                struct drm_crtc_state foo;
-                (void)foo.no_vblank;
-            }"
-
-            compile_check_conftest "$CODE" "NV_DRM_CRTC_STATE_HAS_NO_VBLANK" "" "types"
-        ;;
-
         drm_mode_config_has_allow_fb_modifiers)
             #
             # Determine if the 'drm_mode_config' structure has

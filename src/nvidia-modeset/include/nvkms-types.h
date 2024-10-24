@@ -693,6 +693,7 @@ typedef struct {
     NvBool disableMidFrameAndDWCFWatermark;
     enum NvKmsOutputTf tf;
 
+    enum NvKmsOutputColorimetry colorimetry;
     NvBool skipLayerPendingFlips[NVKMS_MAX_LAYERS_PER_HEAD];
 
     struct {
@@ -701,6 +702,7 @@ typedef struct {
         NvBool cursorPosition    : 1;
         NvBool tf                : 1;
         NvBool hdrStaticMetadata : 1;
+        NvBool colorimetry       : 1;
 
         NvBool layerPosition[NVKMS_MAX_LAYERS_PER_HEAD];
         NvBool layerSyncObjects[NVKMS_MAX_LAYERS_PER_HEAD];
@@ -928,9 +930,10 @@ enum NVKMS_GAMMA_LUT {
     NVKMS_GAMMA_LUT_IDENTITY = 0,
     NVKMS_GAMMA_LUT_SRGB     = 1,
     NVKMS_GAMMA_LUT_PQ       = 2,
+    NVKMS_GAMMA_LUT_BT709    = 3,
 
     // Must be last, used to track number of colorspaces.
-    NVKMS_GAMMA_LUT_LAST     = 3,
+    NVKMS_GAMMA_LUT_LAST     = 4,
 };
 
 /* Device-specific EVO state (subdevice- and channel-independent) */
@@ -1747,6 +1750,8 @@ typedef struct _NVDispHeadStateEvoRec {
 
     enum NvKmsOutputTf tf;
 
+    enum NvKmsOutputColorimetry colorimetry;
+
     struct {
         enum NvKmsHDROutputState outputState;
         struct NvKmsHDRStaticMetadata staticMetadata;
@@ -1757,8 +1762,6 @@ typedef struct _NVDispHeadStateEvoRec {
         NvBool outputLutEnabled : 1;
         NvBool baseLutEnabled   : 1;
     } lut;
-
-    enum NvKmsOutputColorSpace outputColorSpace;
 
     /*
      * The api head can be mapped onto the N harware heads, a frame presented
@@ -1797,6 +1800,9 @@ typedef struct _NVDispApiHeadStateEvoRec {
     NVAttributesSetEvoRec attributes;
 
     enum NvKmsOutputTf tf;
+
+    enum NvKmsOutputColorimetry colorimetry;
+
     nvkms_timer_handle_t *hdrToSdrTransitionTimer;
 
     /*
@@ -1934,6 +1940,8 @@ typedef struct _NVDispEvoRec {
     NvU32 vrrSetTimeoutEventUsageCount;
     NVOS10_EVENT_KERNEL_CALLBACK_EX vrrSetTimeoutCallback;
     NvU32 vrrSetTimeoutEventHandle;
+
+    NVListRec vblankIntrCallbackList[NVKMS_MAX_HEADS_PER_DISP];
 } NVDispEvoRec;
 
 static inline NvU32 GetNextHwHead(NvU32 hwHeadsMask, const NvU32 prevHwHead)
@@ -1997,6 +2005,19 @@ typedef struct _NVVBlankCallbackRec {
     void *pUserData;
     NvU32 apiHead;
 } NVVBlankCallbackRec;
+
+typedef void (*NVVBlankIntrCallbackProc)(NvU64 param1, NvU64 param2);
+
+typedef struct _NVVBlankIntrCallbackRec {
+    NVListRec vblankIntrCallbackListEntry;
+    NVVBlankIntrCallbackProc pCallback;
+    NvU32 apiHead;
+    NvU32 rmVBlankCallbackHandle;
+    NvU64 param1;
+    NvU64 param2;
+    struct nvkms_ref_ptr *ref_ptr;
+    NVOS10_EVENT_KERNEL_CALLBACK_EX vblankNotifierEventCallback;
+} NVVBlankIntrCallbackRec;
 
 typedef void (*NVRgLine1CallbackProc)(NVDispEvoRec *pDispEvo,
                                       const NvU32 head,

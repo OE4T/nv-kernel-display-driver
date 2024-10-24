@@ -76,6 +76,10 @@
 
 #define SRGB_EOTF_LUT_NUM_ENTRIES 935
 #define SRGB_OETF_LUT_NUM_ENTRIES 178
+
+#define BT709_EOTF_LUT_NUM_ENTRIES 883
+#define BT709_OETF_LUT_NUM_ENTRIES 228
+
 #define PQ_EOTF_LUT_NUM_ENTRIES 508
 #define PQ_OETF_LUT_NUM_ENTRIES 337
 
@@ -351,9 +355,165 @@ static const NvU32 OetfPQ512SegSizesLog2[33] = {
     5,
 };
 
+static const NvU16 BT709EOTFLUTEntries[BT709_EOTF_LUT_NUM_ENTRIES] = {
+    0x0000, 0x1c72, 0x2072, 0x22ab, 0x2472, 0x2476, 0x247b, 0x247f, 0x2484,
+    0x2488, 0x248d, 0x2491, 0x2495, 0x249a, 0x249e, 0x24a3, 0x24a7, 0x24ac,
+    0x24b0, 0x24b5, 0x24b9, 0x24bd, 0x24c2, 0x24c6, 0x24cb, 0x24cf, 0x24d4,
+    0x24d8, 0x24dd, 0x24e1, 0x24e5, 0x24ea, 0x24ee, 0x24f3, 0x24f7, 0x24fc,
+    0x2500, 0x2505, 0x2509, 0x250d, 0x2512, 0x2516, 0x251b, 0x251f, 0x2524,
+    0x2528, 0x252d, 0x2531, 0x2535, 0x253a, 0x253e, 0x2543, 0x2547, 0x254c,
+    0x2550, 0x2555, 0x2559, 0x255d, 0x2562, 0x2566, 0x256b, 0x256f, 0x2574,
+    0x2578, 0x257d, 0x2581, 0x2585, 0x258a, 0x258e, 0x2593, 0x2597, 0x259c,
+    0x25a0, 0x25a5, 0x25a9, 0x25ad, 0x25b2, 0x25b6, 0x25bb, 0x25bf, 0x25bf,
+    0x25c4, 0x25c8, 0x25cc, 0x25d1, 0x25d5, 0x25da, 0x25de, 0x25e3, 0x25e7,
+    0x25ec, 0x25f0, 0x25f5, 0x25f9, 0x25fe, 0x2602, 0x2607, 0x260c, 0x2610,
+    0x2615, 0x2619, 0x261e, 0x2622, 0x2627, 0x262c, 0x2630, 0x2635, 0x263a,
+    0x263e, 0x2643, 0x2647, 0x264c, 0x2651, 0x2655, 0x265a, 0x265f, 0x2664,
+    0x2668, 0x266d, 0x2672, 0x2676, 0x267b, 0x2680, 0x2685, 0x2689, 0x268e,
+    0x2693, 0x2698, 0x269c, 0x26a1, 0x26a6, 0x26ab, 0x26b0, 0x26c3, 0x26d6,
+    0x26ea, 0x26fe, 0x2711, 0x2725, 0x2739, 0x274e, 0x2762, 0x2776, 0x278b,
+    0x27a0, 0x27b4, 0x27c9, 0x27de, 0x27f3, 0x2825, 0x2850, 0x287d, 0x28ab,
+    0x28ae, 0x28b1, 0x28b4, 0x28b7, 0x28ba, 0x28bd, 0x28bf, 0x28c2, 0x28c5,
+    0x28c8, 0x28cb, 0x28ce, 0x28d1, 0x28d4, 0x28d7, 0x28da, 0x28dd, 0x28e0,
+    0x28e3, 0x28e6, 0x28e9, 0x28ec, 0x28ef, 0x28f2, 0x28f5, 0x28f8, 0x28fb,
+    0x28fe, 0x2901, 0x2904, 0x2907, 0x290a, 0x290d, 0x2910, 0x2913, 0x2916,
+    0x2919, 0x291c, 0x291f, 0x2922, 0x2925, 0x2928, 0x292b, 0x292e, 0x2931,
+    0x2934, 0x2937, 0x293a, 0x293e, 0x2941, 0x2944, 0x2947, 0x294a, 0x294d,
+    0x2950, 0x2953, 0x2956, 0x2959, 0x295d, 0x2960, 0x2963, 0x2966, 0x2969,
+    0x296c, 0x296f, 0x2973, 0x2976, 0x2979, 0x297c, 0x297f, 0x2982, 0x2986,
+    0x2989, 0x298c, 0x298f, 0x2992, 0x2995, 0x2999, 0x299c, 0x299f, 0x29a2,
+    0x29a5, 0x29a9, 0x29ac, 0x29af, 0x29b2, 0x29b6, 0x29b9, 0x29bc, 0x29bf,
+    0x29c3, 0x29c6, 0x29c9, 0x29cc, 0x29d0, 0x29d3, 0x29d6, 0x29d9, 0x29dd,
+    0x29e0, 0x29e3, 0x29e7, 0x29ea, 0x29ed, 0x29f0, 0x29f4, 0x29f7, 0x29fa,
+    0x29fe, 0x2a01, 0x2a04, 0x2a08, 0x2a0b, 0x2a0e, 0x2a12, 0x2a15, 0x2a18,
+    0x2a1c, 0x2a1f, 0x2a22, 0x2a26, 0x2a29, 0x2a2d, 0x2a30, 0x2a33, 0x2a37,
+    0x2a3a, 0x2a3d, 0x2a74, 0x2aac, 0x2ae5, 0x2b1f, 0x2b5a, 0x2b96, 0x2bd3,
+    0x2c08, 0x2c48, 0x2c8a, 0x2c8e, 0x2c92, 0x2c96, 0x2c9b, 0x2c9f, 0x2ca3,
+    0x2ca7, 0x2cab, 0x2cb0, 0x2cb4, 0x2cb8, 0x2cbc, 0x2cc1, 0x2cc5, 0x2cc9,
+    0x2cce, 0x2cd2, 0x2cd6, 0x2cdb, 0x2cdf, 0x2ce3, 0x2ce8, 0x2cec, 0x2cf0,
+    0x2cf5, 0x2cf9, 0x2cfd, 0x2d02, 0x2d06, 0x2d0b, 0x2d0f, 0x2d14, 0x2d18,
+    0x2d1c, 0x2d21, 0x2d25, 0x2d2a, 0x2d2e, 0x2d33, 0x2d37, 0x2d3c, 0x2d40,
+    0x2d45, 0x2d49, 0x2d4e, 0x2d52, 0x2d57, 0x2d5c, 0x2d60, 0x2d65, 0x2d69,
+    0x2d6e, 0x2d73, 0x2d77, 0x2d7c, 0x2d80, 0x2d85, 0x2d8a, 0x2d8e, 0x2d93,
+    0x2d98, 0x2d9c, 0x2da1, 0x2da6, 0x2df2, 0x2e41, 0x2e55, 0x2e69, 0x2e7d,
+    0x2e91, 0x2ea6, 0x2ebb, 0x2ecf, 0x2ee4, 0x2f39, 0x2f91, 0x2fea, 0x3023,
+    0x3052, 0x3082, 0x30b3, 0x30e6, 0x30e7, 0x30e9, 0x30eb, 0x30ec, 0x30ee,
+    0x30ef, 0x30f1, 0x30f3, 0x30f4, 0x30f6, 0x30f7, 0x30f9, 0x30fb, 0x30fc,
+    0x30fe, 0x30ff, 0x3101, 0x3103, 0x3104, 0x3106, 0x3108, 0x3109, 0x310b,
+    0x310c, 0x310e, 0x3110, 0x3111, 0x3113, 0x3115, 0x3116, 0x3118, 0x3119,
+    0x311b, 0x311d, 0x311e, 0x3120, 0x3122, 0x3123, 0x3125, 0x3126, 0x3128,
+    0x312a, 0x312b, 0x312d, 0x312f, 0x3130, 0x3132, 0x3134, 0x3135, 0x3137,
+    0x3139, 0x313a, 0x313c, 0x313d, 0x313f, 0x3141, 0x3142, 0x3144, 0x3146,
+    0x3147, 0x3149, 0x314b, 0x314c, 0x314e, 0x3150, 0x3151, 0x3153, 0x3155,
+    0x3156, 0x3158, 0x315a, 0x315b, 0x315d, 0x315f, 0x3160, 0x3162, 0x3164,
+    0x3165, 0x3167, 0x3169, 0x316b, 0x316c, 0x316e, 0x3170, 0x3171, 0x3173,
+    0x3175, 0x3176, 0x3178, 0x317a, 0x317b, 0x317d, 0x317f, 0x3181, 0x3182,
+    0x3184, 0x3186, 0x3187, 0x3189, 0x318b, 0x318c, 0x318e, 0x3190, 0x3192,
+    0x3193, 0x3195, 0x3197, 0x3198, 0x319a, 0x319c, 0x319e, 0x319f, 0x31a1,
+    0x31a3, 0x31a4, 0x31a6, 0x31a8, 0x31aa, 0x31ab, 0x31ad, 0x31af, 0x31b0,
+    0x31b2, 0x31b4, 0x31b6, 0x31b7, 0x31b9, 0x31bb, 0x31c9, 0x31d7, 0x31e5,
+    0x31f3, 0x3201, 0x3210, 0x321e, 0x322c, 0x322e, 0x3230, 0x3232, 0x3234,
+    0x3235, 0x3237, 0x3239, 0x323b, 0x323d, 0x323e, 0x3240, 0x3242, 0x3244,
+    0x3246, 0x3248, 0x3249, 0x324b, 0x324d, 0x324f, 0x3251, 0x3253, 0x3254,
+    0x3256, 0x3258, 0x325a, 0x325c, 0x325e, 0x325f, 0x3261, 0x3263, 0x3265,
+    0x3267, 0x3269, 0x326a, 0x326c, 0x326e, 0x3270, 0x3272, 0x3274, 0x3276,
+    0x3277, 0x3279, 0x327b, 0x327d, 0x327f, 0x3281, 0x3283, 0x3284, 0x3286,
+    0x3288, 0x328a, 0x328c, 0x328e, 0x3290, 0x3292, 0x3293, 0x3295, 0x3297,
+    0x3299, 0x329b, 0x329d, 0x329f, 0x32a1, 0x32a2, 0x331d, 0x335c, 0x339d,
+    0x33de, 0x3411, 0x3455, 0x349c, 0x34e5, 0x34ef, 0x34f8, 0x3502, 0x350b,
+    0x3515, 0x351e, 0x3528, 0x3531, 0x3545, 0x3558, 0x356c, 0x3580, 0x35d0,
+    0x35fa, 0x3624, 0x362e, 0x3639, 0x3643, 0x364e, 0x3659, 0x3664, 0x366e,
+    0x3679, 0x36d2, 0x36ff, 0x372c, 0x378a, 0x37e9, 0x3826, 0x3858, 0x388c,
+    0x38c1, 0x38f8, 0x38f9, 0x38f9, 0x38fa, 0x38fb, 0x38fc, 0x38fd, 0x38fe,
+    0x38ff, 0x39ff, 0x3900, 0x3901, 0x3902, 0x3903, 0x3904, 0x3905, 0x3906,
+    0x3906, 0x3907, 0x3908, 0x3909, 0x390a, 0x390b, 0x390c, 0x390c, 0x390d,
+    0x390e, 0x390f, 0x3910, 0x3911, 0x3912, 0x3913, 0x3913, 0x3914, 0x3915,
+    0x3916, 0x3917, 0x3918, 0x3919, 0x391a, 0x391a, 0x391b, 0x391c, 0x391d,
+    0x391e, 0x391f, 0x3920, 0x3920, 0x3921, 0x3922, 0x3923, 0x3924, 0x3925,
+    0x3926, 0x3927, 0x3928, 0x3928, 0x3929, 0x392a, 0x392b, 0x392c, 0x392d,
+    0x392e, 0x392f, 0x392f, 0x3930, 0x3931, 0x3932, 0x3934, 0x3935, 0x3936,
+    0x3936, 0x3937, 0x3938, 0x3939, 0x393a, 0x393b, 0x393c, 0x393d, 0x393e,
+    0x393e, 0x393f, 0x3940, 0x3941, 0x3942, 0x3943, 0x3944, 0x3945, 0x3946,
+    0x3946, 0x3947, 0x3948, 0x3949, 0x394a, 0x394b, 0x394c, 0x394d, 0x394e,
+    0x394e, 0x394f, 0x3950, 0x3951, 0x3952, 0x3953, 0x3954, 0x3955, 0x3956,
+    0x3956, 0x3957, 0x3958, 0x3959, 0x395a, 0x395b, 0x395c, 0x395d, 0x395e,
+    0x395f, 0x395f, 0x3960, 0x3961, 0x3962, 0x3963, 0x3964, 0x3965, 0x3966,
+    0x3967, 0x3968, 0x3968, 0x396a, 0x396c, 0x396e, 0x3970, 0x3971, 0x3973,
+    0x3975, 0x3977, 0x3979, 0x397b, 0x397c, 0x397e, 0x3980, 0x3982, 0x3984,
+    0x3985, 0x3987, 0x3989, 0x398b, 0x398d, 0x398f, 0x3990, 0x3992, 0x3994,
+    0x3996, 0x3998, 0x399a, 0x399b, 0x399d, 0x399f, 0x39a1, 0x39a3, 0x39a5,
+    0x39a6, 0x39a8, 0x39aa, 0x39ac, 0x39ae, 0x39b0, 0x39b2, 0x39b3, 0x39b5,
+    0x39b7, 0x39b9, 0x39bb, 0x39bd, 0x39bf, 0x39c0, 0x39c2, 0x39c4, 0x39c6,
+    0x39c8, 0x39ca, 0x39cc, 0x39ce, 0x39cf, 0x39d1, 0x39d3, 0x39d5, 0x39d7,
+    0x39d9, 0x39db, 0x39dd, 0x39de, 0x39e0, 0x39e2, 0x39e4, 0x39e6, 0x39e8,
+    0x39ea, 0x39ec, 0x39ee, 0x39ef, 0x39f1, 0x39f3, 0x39f5, 0x39f7, 0x39f9,
+    0x39fb, 0x39fd, 0x39ff, 0x3a01, 0x3a03, 0x3a04, 0x3a06, 0x3a08, 0x3a0a,
+    0x3a0c, 0x3a0e, 0x3a10, 0x3a12, 0x3a14, 0x3a16, 0x3a18, 0x3a1a, 0x3a1b,
+    0x3a1d, 0x3a1f, 0x3a21, 0x3a23, 0x3a25, 0x3a27, 0x3a29, 0x3a2b, 0x3a2d,
+    0x3a2f, 0x3a31, 0x3a33, 0x3a35, 0x3a37, 0x3a39, 0x3a3a, 0x3a3c, 0x3a3e,
+    0x3a40, 0x3a42, 0x3a44, 0x3a46, 0x3a48, 0x3a4a, 0x3a4c, 0x3a4e, 0x3a50,
+    0x3a52, 0x3a54, 0x3a56, 0x3a58, 0x3a5a, 0x3a99, 0x3adb, 0x3b1d, 0x3b61,
+    0x3ba6, 0x3bec, 0x3c1a, 0x3c3f, 0x3c64, 0x3c8a, 0x3cb1, 0x3cd8, 0x3d00,
+};
+
+static const NvU16 BT709EOTFLUTVSSHeader[16] = {
+    0x6000, 0xb653, 0x3694, 0x0000,
+    0x124b, 0x467b, 0x6002, 0x0000,
+    0x8642, 0x0000, 0xbb00, 0x0000,
+    0x016d, 0x0000, 0x0000, 0x0000,
+};
+
+static const NvU16 BT709OETFLUTEntries[BT709_OETF_LUT_NUM_ENTRIES] = {
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000, 0x0000,
+    0x0004, 0x0004, 0x0008, 0x0010, 0x0024, 0x0048, 0x0090, 0x0120,
+    0x0240, 0x0480, 0x0900, 0x1200, 0x1224, 0x1248, 0x126c, 0x1290,
+    0x12b4, 0x12d8, 0x12fc, 0x1320, 0x1344, 0x1368, 0x138c, 0x13b0,
+    0x13d4, 0x13f8, 0x141c, 0x1440, 0x1464, 0x1488, 0x14ac, 0x14e0,
+    0x1504, 0x1528, 0x154c, 0x1570, 0x1594, 0x15b4, 0x15d8, 0x15fc,
+    0x1620, 0x1640, 0x1664, 0x1688, 0x16a8, 0x16cc, 0x16ec, 0x1710,
+    0x1730, 0x1754, 0x1774, 0x1798, 0x17b8, 0x17d8, 0x17fc, 0x181c,
+    0x183c, 0x185c, 0x1880, 0x18a0, 0x18c0, 0x18e0, 0x1900, 0x1920,
+    0x1940, 0x1960, 0x1980, 0x19a0, 0x19c0, 0x19e0, 0x1a00, 0x1a20,
+    0x1a40, 0x1a60, 0x1a80, 0x1aa0, 0x1abc, 0x1adc, 0x1afc, 0x1b1c,
+    0x1b38, 0x1b58, 0x1b78, 0x1b94, 0x1bb4, 0x1bd0, 0x1bf0, 0x1c10,
+    0x1c2c, 0x1c4c, 0x1c68, 0x1c88, 0x1ca4, 0x1cc0, 0x1ce0, 0x1cfc,
+    0x1d1c, 0x1d38, 0x1d54, 0x1d74, 0x1d90, 0x1dac, 0x1dc8, 0x1de8,
+    0x1e04, 0x1e20, 0x1e3c, 0x1e58, 0x1e78, 0x1e94, 0x1eb0, 0x1ecc,
+    0x1ee8, 0x1f04, 0x1f20, 0x1f3c, 0x1f58, 0x1f74, 0x1f90, 0x1fac,
+    0x1fc8, 0x1fe4, 0x2000, 0x201c, 0x2038, 0x2054, 0x206c, 0x2088,
+    0x20a4, 0x20c0, 0x20dc, 0x20f4, 0x2110, 0x212c, 0x2148, 0x2160,
+    0x217c, 0x2198, 0x21b0, 0x21cc, 0x2504, 0x280c, 0x2ae8, 0x2da4,
+    0x303c, 0x32bc, 0x3524, 0x3774, 0x39b0, 0x3bd8, 0x3df0, 0x3ffc,
+    0x41f8, 0x43e4, 0x45c8, 0x47a0, 0x496c, 0x4b2c, 0x4ce4, 0x4e94,
+    0x503c, 0x51dc, 0x5374, 0x5504, 0x5814, 0x5b08, 0x5de4, 0x60ac,
+    0x6364, 0x6608, 0x6898, 0x6b1c, 0x6d90, 0x6ff8, 0x7250, 0x74a0,
+    0x76e4, 0x7918, 0x7b48, 0x7d6c, 0x8198, 0x85a0, 0x8988, 0x8d58,
+    0x910c, 0x94a4, 0x9828, 0x9b98, 0x9ef4, 0xa23c, 0xa570, 0xa898,
+    0xabac, 0xaeb4, 0xb1ac, 0xb498, 0xba4c, 0xbfd0, 0xc528, 0xca5c,
+    0xcf68, 0xd454, 0xd924, 0xddd4, 0xe268, 0xe6e4, 0xeb48, 0xef94,
+    0xf3cc, 0xf7f0, 0xfc00, 0xfffc,
+};
+
+static const NvU16 BT709OETFLUTVSSHeader[16] = {
+    0x0000, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x923e, 0x0000,
+    0x0004, 0x0000, 0x0000, 0x0000,
+    0x0000, 0x0000, 0x0000, 0x0000,
+};
+
 enum FMTCoeffType
 {
     FMT_COEFF_TYPE_IDENTITY = 0,
+
+    FMT_COEFF_TYPE_REC601_YUV_8BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC601_YUV_8BPC_FULL_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC601_YUV_10BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC601_YUV_10BPC_FULL_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC601_YUV_12BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC601_YUV_12BPC_FULL_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC601_YUV_16BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC601_YUV_16BPC_FULL_TO_RGB_16BPC_FULL,
 
     FMT_COEFF_TYPE_REC709_YUV_8BPC_LTD_TO_RGB_16BPC_FULL,
     FMT_COEFF_TYPE_REC709_YUV_8BPC_FULL_TO_RGB_16BPC_FULL,
@@ -361,7 +521,17 @@ enum FMTCoeffType
     FMT_COEFF_TYPE_REC709_YUV_10BPC_FULL_TO_RGB_16BPC_FULL,
     FMT_COEFF_TYPE_REC709_YUV_12BPC_LTD_TO_RGB_16BPC_FULL,
     FMT_COEFF_TYPE_REC709_YUV_12BPC_FULL_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC709_YUV_16BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC709_YUV_16BPC_FULL_TO_RGB_16BPC_FULL,
 
+    FMT_COEFF_TYPE_REC2020_YUV_8BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC2020_YUV_8BPC_FULL_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC2020_YUV_10BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC2020_YUV_10BPC_FULL_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC2020_YUV_12BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC2020_YUV_12BPC_FULL_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC2020_YUV_16BPC_LTD_TO_RGB_16BPC_FULL,
+    FMT_COEFF_TYPE_REC2020_YUV_16BPC_FULL_TO_RGB_16BPC_FULL,
     // FMT is always identity for RGB to avoid possible calculation error.
 
     // must be the last entry
@@ -372,6 +542,22 @@ static const NvU32 FMTMatrix[FMT_COEFF_TYPE_MAX][12] =
 {
     // FMT_COEFF_TYPE_IDENTITY
     {  0x10000,        0,        0,        0,        0,  0x10000,        0,        0,        0,        0,  0x10000,        0 },
+    // FMT_COEFF_TYPE_REC601_YUV_8BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x19A29,  0x12B3C,        0, 0x1F2038, 0x1F2F14,  0x12B3C, 0x1F9B52,   0x8819,        0,  0x12B3C,  0x20668, 0x1EEA18 },
+    // FMT_COEFF_TYPE_REC601_YUV_8BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x1684C,  0x100FD,        0, 0x1F4D42, 0x1F487A,  0x100FD, 0x1FA790,   0x86EB,        0,  0x100FD,  0x1C762, 0x1F1E16 },
+    // FMT_COEFF_TYPE_REC601_YUV_10BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x19A29,  0x12B3C,        0, 0x1F2038, 0x1F2F14,  0x12B3C, 0x1F9B52,   0x8819,        0,  0x12B3C,  0x20668, 0x1EEA18 },
+    // FMT_COEFF_TYPE_REC601_YUV_10BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x1673E,  0x1003C,        0, 0x1F4CBB, 0x1F4903,  0x1003C, 0x1FA7D2,   0x8751,        0,  0x1003C,  0x1C60C, 0x1F1D6B },
+    // FMT_COEFF_TYPE_REC601_YUV_12BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x19A29,  0x12B3C,        0, 0x1F2038, 0x1F2F14,  0x12B3C, 0x1F9B52,   0x8819,        0,  0x12B3C,  0x20668, 0x1EEA18 },
+    // FMT_COEFF_TYPE_REC601_YUV_12BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x166FA,  0x1000C,        0, 0x1F4C99, 0x1F4926,  0x1000C, 0x1FA7E3,   0x876B,        0,  0x1000C,  0x1C5B7, 0x1F1D41 },
+    // FMT_COEFF_TYPE_REC601_YUV_16BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x19A29,  0x12B3C,        0, 0x1F2038, 0x1F2F14,  0x12B3C, 0x1F9B52,   0x8819,        0,  0x12B3C,  0x20668, 0x1EEA18 },
+    // FMT_COEFF_TYPE_REC601_YUV_16BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x166E5,   0xFFFD,        0, 0x1F4C8F, 0x1F4931,   0xFFFD, 0x1FA7E8,   0x8773,        0,   0xFFFD,  0x1C59C, 0x1F1D34 },
     // FMT_COEFF_TYPE_REC709_YUV_8BPC_LTD_TO_RGB_16BPC_FULL
     {  0x1CCB7,  0x12B3C,        0, 0x1F06F1, 0x1F770C,  0x12B3C, 0x1FC933,   0x4D2D,        0,  0x12B3C,  0x21EDD, 0x1EDDDE },
     // FMT_COEFF_TYPE_REC709_YUV_8BPC_FULL_TO_RGB_16BPC_FULL
@@ -384,6 +570,26 @@ static const NvU32 FMTMatrix[FMT_COEFF_TYPE_MAX][12] =
     {  0x1CCB7,  0x12B3C,        0, 0x1F06F1, 0x1F770C,  0x12B3C, 0x1FC933,   0x4D2D,        0,  0x12B3C,  0x21EDD, 0x1EDDDE },
     // FMT_COEFF_TYPE_REC709_YUV_12BPC_FULL_TO_RGB_16BPC_FULL
     {  0x19339,  0x1000C,        0, 0x1F367D, 0x1F8823,  0x1000C, 0x1FD009,   0x53DF,        0,  0x1000C,  0x1DB1F, 0x1F128E },
+    // FMT_COEFF_TYPE_REC709_YUV_16BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x1CCB7,  0x12B3C,        0, 0x1F06F1, 0x1F770C,  0x12B3C, 0x1FC933,   0x4D2D,        0,  0x12B3C,  0x21EDD, 0x1EDDDE },
+    // FMT_COEFF_TYPE_REC709_YUV_16BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x19321,   0xFFFD,        0, 0x1F3671, 0x1F882A,   0xFFFD, 0x1FD00C,   0x53E4,        0,   0xFFFD,  0x1DB03, 0x1F1280 },
+    // FMT_COEFF_TYPE_REC2020_YUV_8BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x1AF66,  0x12B3C,        0, 0x1F1599, 0x1F58D9,  0x12B3C, 0x1FCFDC,   0x58F2,        0,  0x12B3C,  0x22669, 0x1EDA18 },
+    // FMT_COEFF_TYPE_REC2020_YUV_8BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x17AF4,  0x100FD,        0, 0x1F4401, 0x1F6D2B,  0x100FD, 0x1FD5B6,   0x5DD2,        0,  0x100FD,  0x1E37F, 0x1F1024 },
+    // FMT_COEFF_TYPE_REC2020_YUV_10BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x1AF66,  0x12B3C,        0, 0x1F1599, 0x1F58D9,  0x12B3C, 0x1FCFDC,   0x58F2,        0,  0x12B3C,  0x22669, 0x1EDA18 },
+    // FMT_COEFF_TYPE_REC2020_YUV_10BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x179D8,  0x1003C,        0, 0x1F4372, 0x1F6D99,  0x1003C, 0x1FD5D6,   0x5E19,        0,  0x1003C,  0x1E214, 0x1F0F6E },
+    // FMT_COEFF_TYPE_REC2020_YUV_12BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x1AF66,  0x12B3C,        0, 0x1F1599, 0x1F58D9,  0x12B3C, 0x1FCFDC,   0x58F2,        0,  0x12B3C,  0x22669, 0x1EDA18 },
+    // FMT_COEFF_TYPE_REC2020_YUV_12BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x17991,  0x1000C,        0, 0x1F434F, 0x1F6DB5,  0x1000C, 0x1FD5DE,   0x5E2B,        0,  0x1000C,  0x1E1BA, 0x1F0F41 },
+    // FMT_COEFF_TYPE_REC2020_YUV_16BPC_LTD_TO_RGB_16BPC_FULL
+    {  0x1AF66,  0x12B3C,        0, 0x1F1599, 0x1F58D9,  0x12B3C, 0x1FCFDC,   0x58F2,        0,  0x12B3C,  0x22669, 0x1EDA18 },
+    // FMT_COEFF_TYPE_REC2020_YUV_16BPC_FULL_TO_RGB_16BPC_FULL
+    {  0x1797B,   0xFFFD,        0, 0x1F4344, 0x1F6DBE,   0xFFFD, 0x1FD5E0,   0x5E30,        0,   0xFFFD,  0x1E19E, 0x1F0F33 },
 };
 
 static void SetCsc00MatrixC5(NVEvoChannelPtr pChannel,
@@ -616,10 +822,30 @@ static const struct NvKmsCscMatrix Rec709RGBToLMS = {{
  * This is a 3x4 matrix with S5.14 coefficients (truncated from S5.16
  * SW-specified values).
  */
+static const struct NvKmsCscMatrix Rec601RGBToLMS = {{
+    { 0x49f0, 0x9dc4, 0x184c, 0 },
+    { 0x28d4, 0xb5b0, 0x217c, 0 },
+    { 0x8d4, 0x2644, 0xd0ec, 0 },
+}};
+
+/*
+ * This is a 3x4 matrix with S5.14 coefficients (truncated from S5.16
+ * SW-specified values).
+ */
 static const struct NvKmsCscMatrix LMSToRec709RGB = {{
     { 0x62c48,  0x1aadf4, 0x25a8,   0 },
     { 0x1ead18, 0x28f64,  0x1fc390, 0 },
     { 0x1ffd00, 0x1fbc34, 0x146c4,  0 },
+}};
+
+/*
+ * This is a 3x4 matrix with S5.14 coefficients (truncated from S5.16
+ * SW-specified values).
+ */
+static const struct NvKmsCscMatrix LMSToRec601RGB = {{
+    { 0x6a668, 0x1a3144, 0x2838, 0 },
+    { 0x1e81cc, 0x2c31c, 0x1fbb28, 0 },
+    { 0x1e4, 0x1fbd48, 0x14498, 0 },
 }};
 
 /*
@@ -719,6 +945,8 @@ static void ConfigureCsc0C5(NVDevEvoPtr pDevEvo,
     if (enable) {
         if (colorspace == NVKMS_INPUT_COLORSPACE_BT2100_PQ) {
             matrix = Rec2020RGBToLMS;
+        } else if (colorspace == NVKMS_INPUT_COLORSPACE_BT601) {
+            matrix = Rec601RGBToLMS;
         } else {
             matrix = Rec709RGBToLMS;
         }
@@ -1106,7 +1334,9 @@ static void ConfigureCsc1C5(NVDevEvoPtr pDevEvo,
             // XXX HDR TODO: Support other transfer functions
             nvAssert(pHeadState->tf == NVKMS_OUTPUT_TF_PQ);
             matrix = LMSToRec2020RGB;
-        } else {
+        } else if (pHeadState->colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT601) {
+            matrix = LMSToRec601RGB;
+        } else if (pHeadState->colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT709) {
             matrix = LMSToRec709RGB;
         }
 
@@ -1236,28 +1466,74 @@ static const NvU32* EvoGetFMTMatrixC5(
     // Choose FMT matrix based on input colorspace, bpc, and colorrange.
     if (pFormatInfo->isYUV) {
         NvBool specifiedFull = (pHwState->colorRange == NVKMS_INPUT_COLORRANGE_FULL);
-        if (pFormatInfo->yuv.depthPerComponent == 8) {
-            if (specifiedFull) {
-                retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_8BPC_FULL_TO_RGB_16BPC_FULL];
-            } else {
-                retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_8BPC_LTD_TO_RGB_16BPC_FULL];
+        switch (pHwState->colorSpace) {
+            case NVKMS_INPUT_COLORSPACE_BT601:
+                if (pFormatInfo->yuv.depthPerComponent == 8) {
+                    if (specifiedFull) {
+                        retValue = FMTMatrix[FMT_COEFF_TYPE_REC601_YUV_8BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                        retValue = FMTMatrix[FMT_COEFF_TYPE_REC601_YUV_8BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                } else if (pFormatInfo->yuv.depthPerComponent == 10) {
+                    if (specifiedFull) {
+                        retValue = FMTMatrix[FMT_COEFF_TYPE_REC601_YUV_10BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                        retValue = FMTMatrix[FMT_COEFF_TYPE_REC601_YUV_10BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                } else if (pFormatInfo->yuv.depthPerComponent == 12) {
+                    if (specifiedFull) {
+                        retValue = FMTMatrix[FMT_COEFF_TYPE_REC601_YUV_12BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                        retValue = FMTMatrix[FMT_COEFF_TYPE_REC601_YUV_12BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                }
+                break;
+            case NVKMS_INPUT_COLORSPACE_BT709:
+                if (pFormatInfo->yuv.depthPerComponent == 8) {
+                    if (specifiedFull) {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_8BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_8BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                } else if (pFormatInfo->yuv.depthPerComponent == 10) {
+                    if (specifiedFull) {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_10BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_10BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                } else if (pFormatInfo->yuv.depthPerComponent == 12) {
+                    if (specifiedFull) {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_12BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_12BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                }
+                break;
+            case NVKMS_INPUT_COLORSPACE_BT2100_PQ:
+                 if (pFormatInfo->yuv.depthPerComponent == 8) {
+                    if (specifiedFull) {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC2020_YUV_8BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC2020_YUV_8BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                 } else if (pFormatInfo->yuv.depthPerComponent == 10) {
+                    if (specifiedFull) {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC2020_YUV_10BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC2020_YUV_10BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                 } else if (pFormatInfo->yuv.depthPerComponent == 12) {
+                    if (specifiedFull) {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC2020_YUV_12BPC_FULL_TO_RGB_16BPC_FULL];
+                    } else {
+                       retValue = FMTMatrix[FMT_COEFF_TYPE_REC2020_YUV_12BPC_LTD_TO_RGB_16BPC_FULL];
+                    }
+                 }
+                 break;
+            default:
+                // Unsupported bit depth, fail silently by defaulting to identity.
+                retValue = FMTMatrix[FMT_COEFF_TYPE_IDENTITY];
             }
-        } else if (pFormatInfo->yuv.depthPerComponent == 10) {
-            if (specifiedFull) {
-                retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_10BPC_FULL_TO_RGB_16BPC_FULL];
-            } else {
-                retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_10BPC_LTD_TO_RGB_16BPC_FULL];
-            }
-        } else if (pFormatInfo->yuv.depthPerComponent == 12) {
-            if (specifiedFull) {
-                retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_12BPC_FULL_TO_RGB_16BPC_FULL];
-            } else {
-                retValue = FMTMatrix[FMT_COEFF_TYPE_REC709_YUV_12BPC_LTD_TO_RGB_16BPC_FULL];
-            }
-        } else {
-            // Unsupported bit depth, fail silently by defaulting to identity.
-            retValue = FMTMatrix[FMT_COEFF_TYPE_IDENTITY];
-        }
     } else {
         // All inputs with RGB colorspace receive an identity FMT.
         retValue = FMTMatrix[FMT_COEFF_TYPE_IDENTITY];
@@ -1414,6 +1690,13 @@ void nvEvoInitDefaultLutC5(NVDevEvoPtr pDevEvo)
         pData = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_PQ]->subDeviceAddress[sd];
         EvoSetupPQEotfBaseLutC5(pData);
         EvoSetupPQOetfOutputLutC5(pData);
+
+         // Polulate BT 709 ILUT (degamma) and OLUT (regamma).
+        pData = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_BT709]->subDeviceAddress[sd];
+        FillLut(pData->base, BT709EOTFLUTEntries,
+                BT709_EOTF_LUT_NUM_ENTRIES, BT709EOTFLUTVSSHeader);
+        FillLut(pData->output, BT709OETFLUTEntries,
+                BT709_OETF_LUT_NUM_ENTRIES, BT709OETFLUTVSSHeader);
     }
 }
 
@@ -4685,7 +4968,7 @@ EvoFlipC5Common(NVDevEvoPtr pDevEvo,
         // Assert that the colorspace is a linear encoding.
         nvAssert((pHwState->colorSpace == NVKMS_INPUT_COLORSPACE_SCRGB_LINEAR) ||
                  (pHwState->colorSpace == NVKMS_INPUT_COLORSPACE_NONE) ||
-                 (pHwState->colorSpace == NVKMS_INPUT_COLORSPACE_REC709_LINEAR));
+                 (pHwState->colorSpace == NVKMS_INPUT_COLORSPACE_BT709_LINEAR));
         ctxDma = 0;
     } else if (pHwState->colorSpace != NVKMS_INPUT_COLORSPACE_NONE) {
         switch (pHwState->colorSpace) {
@@ -4694,7 +4977,15 @@ EvoFlipC5Common(NVDevEvoPtr pDevEvo,
                 lutSize = NV_LUT_VSS_HEADER_SIZE + PQ_EOTF_LUT_NUM_ENTRIES;
                 isLutModeVss = TRUE;
                 break;
-            case NVKMS_INPUT_COLORSPACE_REC709:
+            case NVKMS_INPUT_COLORSPACE_BT601:
+                // BT601 also uses the same degamma calculation as 709.
+                // Hence using the 709 degamma table for 601 also.
+
+                ctxDma = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_BT709]->surfaceDesc.ctxDmaHandle;
+                lutSize = NV_LUT_VSS_HEADER_SIZE + BT709_EOTF_LUT_NUM_ENTRIES;
+                isLutModeVss = TRUE;
+                break;
+            case NVKMS_INPUT_COLORSPACE_BT709:
                 // When the output is sRGB, We use sRGB degamma instead of
                 // Rec709 degamma because Rec709 gamma-encoded inputs are
                 // are designed to be compatible with sRGB in the sense
@@ -4708,19 +4999,29 @@ EvoFlipC5Common(NVDevEvoPtr pDevEvo,
                 // Therefore, given a gamma-encoded input signal, the
                 // de/regamma process is purely for conversion to and from
                 // linear space for the sake of linear processing
-                // operations.
-                ctxDma = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_SRGB]->surfaceDesc.ctxDmaHandle;
-                lutSize = NV_LUT_VSS_HEADER_SIZE + SRGB_EOTF_LUT_NUM_ENTRIES;
+                // operations
+                if (pHeadState->colorimetry == NVKMS_OUTPUT_COLORIMETRY_SRGB) {
+                    ctxDma = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_SRGB]->surfaceDesc.ctxDmaHandle;
+                    lutSize = NV_LUT_VSS_HEADER_SIZE + SRGB_EOTF_LUT_NUM_ENTRIES;
+                } else {  // If output is not sRGB, use BT709 degamma
+                    ctxDma = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_BT709]->surfaceDesc.ctxDmaHandle;
+                    lutSize = NV_LUT_VSS_HEADER_SIZE + BT709_EOTF_LUT_NUM_ENTRIES;
+                }
                 isLutModeVss = TRUE;
                 break;
-                // TODO(mtrost): add support for Rec709 EOTF LUT when the output
-                // is not sRGB.
             case NVKMS_INPUT_COLORSPACE_SRGB:
                 ctxDma = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_SRGB]->surfaceDesc.ctxDmaHandle;
                 lutSize = NV_LUT_VSS_HEADER_SIZE + SRGB_EOTF_LUT_NUM_ENTRIES;
                 isLutModeVss = TRUE;
                 break;
-            case NVKMS_INPUT_COLORSPACE_REC709_LINEAR:
+            case NVKMS_INPUT_COLORSPACE_BT2020:
+                // if bit depth is < 12, ELUT/OLUT are exactly same as BT709.
+                // TODO: Add a check for bit depth and use BT709 only if it is < 12.
+                ctxDma = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_BT709]->surfaceDesc.ctxDmaHandle;
+                lutSize = NV_LUT_VSS_HEADER_SIZE + BT709_EOTF_LUT_NUM_ENTRIES;
+                isLutModeVss = TRUE;
+                break;
+            case NVKMS_INPUT_COLORSPACE_BT709_LINEAR:
             default: // XXX HDR TODO: Handle other colorspaces
                 ctxDma = pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_IDENTITY]->surfaceDesc.ctxDmaHandle;
                 lutSize = NV_LUT_VSS_HEADER_SIZE + NV_NUM_EVO_LUT_ENTRIES;
@@ -5401,7 +5702,7 @@ void nvSetupOutputLUT5(NVDevEvoPtr pDevEvo,
         /* Use the default OLUT if the client didn't provide one */
         *pSurfaceDesc = &pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_IDENTITY]->surfaceDesc;
 
-        // Choose the appropriate OLUT based on NvKmsOutputColorSpace.
+        // Choose the appropriate OLUT based on NvKmsOutputColorimetry.
         for (sd = 0; sd < pDevEvo->numSubDevices; sd++) {
             if (pHeadState->hdr.outputState == NVKMS_HDR_OUTPUT_STATE_HDR) {
                 // XXX HDR TODO: Support other transfer functions
@@ -5417,13 +5718,24 @@ void nvSetupOutputLUT5(NVDevEvoPtr pDevEvo,
                  * XXX HDR TODO: Assumes input is in this range, SDR is not.
                  */
                 *fpNormScale = 0xFFFFFFFF / 125;
-            } else if (pHeadState->outputColorSpace == NVKMS_OUTPUT_COLORSPACE_SRGB) {
+            } else if (pHeadState->colorimetry == NVKMS_OUTPUT_COLORIMETRY_SRGB) {
                 *isLutModeVss = TRUE;
                 *lutSize = SRGB_OETF_LUT_NUM_ENTRIES;
                 *pSurfaceDesc = &pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_SRGB]->surfaceDesc;
 
                 // 0xFFFFFFFF / (100.0 / 80.0) which assumes a standard SDR luminance range.
                 *fpNormScale = 0xcccccccc;
+            } else if ((pHeadState->colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT601) ||
+                          (pHeadState->colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT709) ||
+                          (pHeadState->colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT2020)) {
+                    // BT601, BT709 and BT2020 ( for bit depth < 12) uses exactly same
+                    // OETF curve as BT709.
+                    // TODO: Add a check for bit depth also for BT2020 case
+                *isLutModeVss = TRUE;
+                *lutSize = BT709_OETF_LUT_NUM_ENTRIES;
+                *pSurfaceDesc = &pDevEvo->lut.gammaLUTs[NVKMS_GAMMA_LUT_BT709]->surfaceDesc;
+                // For SDR fp Norm scale value is 0xFFFFFFFF
+                *fpNormScale = 0xFFFFFFFF;
             } else {
                 // If no output color space specified, or if the specified
                 // color space is NONE, use Identity OLUT.
@@ -5473,7 +5785,7 @@ static void EvoSetLUTContextDmaC5(const NVDispEvoRec *pDispEvo,
 
     // XXX HDR TODO: Enable custom output LUTs with HDR
     if ((pHeadState->hdr.outputState == NVKMS_HDR_OUTPUT_STATE_HDR) ||
-                     (pHeadState->outputColorSpace != NVKMS_OUTPUT_COLORSPACE_NONE)) {
+                     (pHeadState->colorimetry != NVKMS_OUTPUT_COLORIMETRY_DEFAULT)) {
         enableOutputLut = FALSE;
     }
 
@@ -8243,7 +8555,7 @@ NVEvoHAL nvEvoC6 = {
         FALSE,                                    /* supportsImageSharpening */
         TRUE,                                     /* supportsHDMIVRR */
         FALSE,                                    /* supportsCoreChannelSurface */
-        TRUE,                                     /* supportsHDMIFRL */
+        FALSE,                                    /* supportsHDMIFRL */
         FALSE,                                    /* supportsSetStorageMemoryLayout */
         TRUE,                                     /* supportsIndependentAcqRelSemaphore */
         FALSE,                                    /* supportsCoreLut */

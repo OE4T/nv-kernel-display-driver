@@ -42,9 +42,7 @@ int nv_drm_atomic_check(struct drm_device *dev,
 int nv_drm_atomic_commit(struct drm_device *dev,
                          struct drm_atomic_state *state, bool nonblock);
 
-
-void nv_drm_handle_flip_occurred(struct nv_drm_device *nv_dev,
-                                 NvU32 head, NvU32 plane);
+void nv_drm_handle_flip_event(struct nv_drm_device *nv_dev, NvU32 head, NvU32 layer, bool process_pending);
 
 int nv_drm_shut_down_all_crtcs(struct drm_device *dev);
 

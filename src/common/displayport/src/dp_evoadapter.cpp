@@ -31,6 +31,7 @@
 #include "dp_internal.h"
 #include "dp_evoadapter.h"
 #include "dp_auxdefs.h"
+#include "dp_qse.h"
 #include "dp_tracing.h"
 #include "dp_vrr.h"
 #include <nvmisc.h>
@@ -74,6 +75,7 @@ const struct
     DP_REG_VAL_TYPE valueType;
 } DP_REGKEY_TABLE [] =
 {
+    {NV_DP_REGKEY_DISABLE_QSES,                     &dpRegkeyDatabase.bQsesDisabled,                   DP_REG_VAL_BOOL},
     {NV_DP_REGKEY_ENABLE_AUDIO_BEYOND_48K,          &dpRegkeyDatabase.bAudioBeyond48kEnabled,          DP_REG_VAL_BOOL},
     {NV_DP_REGKEY_OVERRIDE_DPCD_REV,                &dpRegkeyDatabase.dpcdRevOveride,                  DP_REG_VAL_U32},
     {NV_DP_REGKEY_DISABLE_SSC,                      &dpRegkeyDatabase.bSscDisabled,                    DP_REG_VAL_BOOL},
@@ -117,6 +119,7 @@ EvoMainLink::EvoMainLink(EvoInterface * provider, Timer * timer) :
      _isLTPhyRepeaterSupported  = true;
      _rmPhyRepeaterCount        = 0;
      dpMemZero(&_DSC, sizeof(_DSC));
+     dpMemZero(&paramsHdcpCtrl, sizeof(paramsHdcpCtrl));
 
     //
     //  Tell RM to hands off on the DisplayPort hardware
@@ -325,14 +328,260 @@ void EvoMainLink::triggerACT()
     provider->rmControl0073(NV0073_CTRL_CMD_DP_SEND_ACT, &params, sizeof params);
 }
 
-void EvoMainLink::configureHDCPRenegotiate(NvU64 cN, NvU64 cKSV, bool bForceReAuth, bool bRxIDMsgPending){}
+void EvoMainLink::configureAndTriggerECF(NvU64 ecf, NvBool bForceClearEcf, NvBool bAddStreamBack)
+{
+    NV0073_CTRL_CMD_DP_SET_ECF_PARAMS params = {0};
+    params.subDeviceInstance = this->subdeviceIndex;
+    params.sorIndex = provider->getSorIndex();
+    params.ecf = ecf;
+    //
+    // ForceClearECF will delete DP MST Time slots along with ECF from GA10X and Later
+    // if ADD Stream Back is set then it will add back same time slots after clearing ECF
+    // bForceClear = TRUE should be set to have significance for bAddStreamBack
+    // bForceClear will be only set in case of Detach Stream/Flush mode
+    // bAddStream will also be set only in case of QSES error scenario
+    // In all other cases these are set to FALSE
+    //
+    params.bForceClearEcf = bForceClearEcf;
+    params.bAddStreamBack = bAddStreamBack;
+
+    provider->rmControl0073(NV0073_CTRL_CMD_DP_SET_ECF, &params, sizeof params);
+    triggerACT();
+    // Wait for 1 link frame time for ECF to take effect i.e
+    // Wait Time = 1024 MTPs * 64 clocks/MTP * (1/162MHz) = 404.5 us.
+    // As the minimum time available for timer->sleep() is 1 ms hence taking that time
+    timer->sleep(1);
+
+}
+
+//TODO: we need to re-arch this code to remove from dp library
+void EvoMainLink::configureHDCPRenegotiate(NvU64 cN, NvU64 cKSV, bool bForceReAuth, bool bRxIDMsgPending)
+{
+    dpMemZero(&paramsHdcpCtrl, sizeof(paramsHdcpCtrl));
+    paramsHdcpCtrl.subDeviceInstance = this->subdeviceIndex;
+    paramsHdcpCtrl.displayId = this->displayId;
+    paramsHdcpCtrl.cN = cN;
+    paramsHdcpCtrl.cKsv = cKSV;
+    if (bForceReAuth)
+    {
+        paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_FORCE_REAUTH, _YES);
+    }
+    else
+    {
+        paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_FORCE_REAUTH, _NO);
+    }
+
+    if (bRxIDMsgPending)
+    {
+        paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_RXIDMSG_PENDING, _YES);
+    }
+    else
+    {
+        paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_RXIDMSG_PENDING, _NO);
+    }
+
+    paramsHdcpCtrl.cmd |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _CMD, _RENEGOTIATE);
+
+    provider->rmControl0073(NV0073_CTRL_CMD_SPECIFIC_HDCP_CTRL, &paramsHdcpCtrl, sizeof paramsHdcpCtrl);
+}
+
+void EvoMainLink::configureHDCPDisableAuthentication()
+{
+    dpMemZero(&paramsHdcpCtrl, sizeof(paramsHdcpCtrl));
+    paramsHdcpCtrl.subDeviceInstance = this->subdeviceIndex;
+    paramsHdcpCtrl.displayId = this->displayId;
+
+    paramsHdcpCtrl.cmd |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _CMD, _DISABLE_AUTHENTICATION);
+
+    provider->rmControl0073(NV0073_CTRL_CMD_SPECIFIC_HDCP_CTRL, &paramsHdcpCtrl, sizeof paramsHdcpCtrl);
+}
+
+void EvoMainLink::configureHDCPAbortAuthentication(AbortAuthReason abortAuthReason)
+{
+    dpMemZero(&paramsHdcpCtrl, sizeof(paramsHdcpCtrl));
+    paramsHdcpCtrl.subDeviceInstance = this->subdeviceIndex;
+    paramsHdcpCtrl.displayId = this->displayId;
+    paramsHdcpCtrl.cN = HDCP_DUMMY_CN;
+    paramsHdcpCtrl.cKsv = HDCP_DUMMY_CKSV;
+    switch (abortAuthReason)
+    {
+        case UNTRUST: paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _UNTRUST); break; //Abort due to Kp mismatch
+        case UNRELBL: paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _UNRELBL); break; //Abort due to repeated link failure
+        case KSV_LEN: paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _KSV_LEN); break; //Abort due to KSV length
+        case KSV_SIG: paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _KSV_SIG); break; //Abort due to KSV signature
+        case SRM_SIG: paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _SRM_SIG); break; //Abort due to SRM signature
+        case SRM_REV: paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _SRM_REV); break; //Abort due to SRM revocation
+        case NORDY:   paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _NORDY); break; //Abort due to repeater not ready
+        case KSVTOP:  paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _KSVTOP); break; //Abort due to KSV topology error
+        case BADBKSV: paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _BADBKSV); break; //Abort due to invalid Bksv
+        default: paramsHdcpCtrl.flags |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _FLAGS_ABORT, _NONE); break; // Default value;
+    }
+    paramsHdcpCtrl.cmd |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _CMD, _ABORT_AUTHENTICATION);
+
+    provider->rmControl0073(NV0073_CTRL_CMD_SPECIFIC_HDCP_CTRL, &paramsHdcpCtrl, sizeof paramsHdcpCtrl);
+}
+
+void EvoMainLink::configureHDCPValidateLink(HDCPValidateData &hdcpValidateData, NvU64 cN, NvU64 cKsv)
+{
+    dpMemZero(&paramsHdcpCtrl, sizeof(paramsHdcpCtrl));
+    paramsHdcpCtrl.subDeviceInstance = this->subdeviceIndex;
+    paramsHdcpCtrl.displayId = this->displayId;
+    paramsHdcpCtrl.linkCount = 1;
+    paramsHdcpCtrl.cN = cN;
+    paramsHdcpCtrl.cKsv = cKsv;
+    paramsHdcpCtrl.cmd |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _CMD, _VALIDATE_LINK);
+
+    provider->rmControl0073(NV0073_CTRL_CMD_SPECIFIC_HDCP_CTRL, &paramsHdcpCtrl, sizeof paramsHdcpCtrl);
+
+    for (unsigned i = 0; i < NV0073_CTRL_HDCP_VPRIME_SIZE; i++)
+    {
+        hdcpValidateData.vP[i] = paramsHdcpCtrl.vP[i];
+    }
+
+    hdcpValidateData.aN = paramsHdcpCtrl.aN[0]; // Only primary link An for DP use.
+    hdcpValidateData.mP = paramsHdcpCtrl.mP;
+}
+
 void EvoMainLink::configureHDCPGetHDCPState(HDCPState &hdcpState)
 {
-    // HDCP Not Supported
-    hdcpState.HDCP_State_Repeater_Capable = false;
-    hdcpState.HDCP_State_22_Capable = false;
-    hdcpState.HDCP_State_Encryption = false;
-    hdcpState.HDCP_State_Authenticated = false;
+    NV0073_CTRL_SPECIFIC_GET_HDCP_STATE_PARAMS params = {0};
+    params.subDeviceInstance = this->subdeviceIndex;
+    params.displayId = this->displayId;
+
+    // Set CACHED to False, it will cause a hdcpStatusRead which gating the eng.
+    // params.flags = FLD_SET_DRF(0073_CTRL_SPECIFIC, _HDCP_STATE, _ENCRYPTING_CACHED, _TRUE, 0);
+
+    provider->rmControl0073(NV0073_CTRL_CMD_SPECIFIC_GET_HDCP_STATE, &params, sizeof params);
+
+    hdcpState.HDCP_State_1X_Capable = FLD_TEST_DRF(0073_CTRL_SPECIFIC,
+        _HDCP_STATE, _RECEIVER_CAPABLE, _YES, params.flags) ? true : false;
+
+    if (FLD_TEST_DRF(0073_CTRL_SPECIFIC, _HDCP_STATE, _REPEATER_CAPABLE,
+                     _YES, params.flags) ||
+        FLD_TEST_DRF(0073_CTRL_SPECIFIC, _HDCP_STATE, _HDCP22_REPEATER_CAPABLE,
+                     _YES, params.flags))
+    {
+        hdcpState.HDCP_State_Repeater_Capable = true;
+    }
+    else
+    {
+        hdcpState.HDCP_State_Repeater_Capable = false;
+    }
+
+    if (FLD_TEST_DRF(0073_CTRL_SPECIFIC, _HDCP_STATE, _HDCP22_RECEIVER_CAPABLE,
+                     _YES, params.flags) ||
+        FLD_TEST_DRF(0073_CTRL_SPECIFIC, _HDCP_STATE, _HDCP22_REPEATER_CAPABLE,
+                     _YES, params.flags))
+    {
+        hdcpState.HDCP_State_22_Capable = true;
+    }
+    else
+    {
+        hdcpState.HDCP_State_22_Capable = false;
+    }
+
+    if (hdcpState.HDCP_State_22_Capable)
+    {
+        if (FLD_TEST_DRF(0073_CTRL_SPECIFIC, _HDCP_STATE, _HDCP22_ENCRYPTING,_YES, params.flags))
+        {
+            hdcpState.HDCP_State_Encryption = true;
+        }
+        else
+        {
+            hdcpState.HDCP_State_Encryption = false;
+        }
+    }
+    else
+    {
+        if (FLD_TEST_DRF(0073_CTRL_SPECIFIC, _HDCP_STATE,_ENCRYPTING, _YES, params.flags))
+        {
+            hdcpState.HDCP_State_Encryption = true;
+        }
+        else
+        {
+            hdcpState.HDCP_State_Encryption = false;
+        }
+    }
+
+    if (FLD_TEST_DRF(0073_CTRL_SPECIFIC, _HDCP_STATE, _AUTHENTICATED,
+                     _YES, params.flags))
+    {
+        hdcpState.HDCP_State_Authenticated = true;
+    }
+    else
+    {
+        hdcpState.HDCP_State_Authenticated = false;
+    }
+}
+
+void EvoMainLink::disableAlternateScramblerReset()
+{
+    NV0073_CTRL_DP_ASSR_CTRL_PARAMS assrParams;
+    dpMemZero(&assrParams, sizeof(assrParams));
+    assrParams.subDeviceInstance = subdeviceIndex;
+    assrParams.displayId         = displayId;
+
+    assrParams.cmd               = DRF_DEF(0073_CTRL, _DP, _ASSR_CMD, _DISABLE);
+
+    NvU32 code = provider->rmControl0073(NV0073_CTRL_CMD_DP_ASSR_CTRL, &assrParams, sizeof(assrParams));
+
+    if (code != NVOS_STATUS_SUCCESS || assrParams.err)
+    {
+        DP_ASSERT(0 && "Unable to change scrambler reset");
+    }
+}
+
+bool EvoMainLink::setStreamType(unsigned streamIndex, NvU8 streamType, bool * bNeedReNegotiate)
+{
+    dpMemZero(&paramsHdcpCtrl, sizeof(paramsHdcpCtrl));
+    paramsHdcpCtrl.subDeviceInstance = this->subdeviceIndex;
+    paramsHdcpCtrl.displayId = this->displayId;
+    paramsHdcpCtrl.streamIndex = streamIndex;
+    paramsHdcpCtrl.streamType = streamType;
+
+    //
+    // According to spec, Type1 content cannot be transmitted to repeater HDCP1.X downstream device.
+    // Thus RM provides option for client that force to type0 instead repeater blank the output with type1.
+    // TODO: check Playready/HWDRM behavior with this,
+    //  1. Will it stop engaging HWDRM with this fix ?
+    //  2. VPR blanking gets applied and blanks repeater display as well
+    //
+    paramsHdcpCtrl.bEnforceType0Hdcp1xDS = (streamType == NV0073_CTRL_SPECIFIC_HDCP_CTRL_HDCP22_TYPE_1);
+
+    paramsHdcpCtrl.cmd |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _CMD,
+                                    _SET_TYPE);
+
+    *bNeedReNegotiate = false;
+
+    if (!provider->rmControl0073(NV0073_CTRL_CMD_SPECIFIC_HDCP_CTRL,
+                                 &paramsHdcpCtrl, sizeof paramsHdcpCtrl))
+    {
+        if (FLD_TEST_DRF(0073_CTRL_SPECIFIC, _HDCP_CTRL_FLAGS, _TYPE_CHANGED,
+                        _YES, paramsHdcpCtrl.flags))
+        {
+            *bNeedReNegotiate = true;
+        }
+
+        return true;
+    }
+    else
+    {
+        DP_LOG(("DP_EVO> set stream type cmd failed!"));
+        return false;
+    }
+}
+
+void EvoMainLink::forwardPendingKsvListReady(NvBool bKsvListReady)
+{
+    dpMemZero(&paramsHdcpCtrl, sizeof(paramsHdcpCtrl));
+    paramsHdcpCtrl.subDeviceInstance = this->subdeviceIndex;
+    paramsHdcpCtrl.displayId = this->displayId;
+    paramsHdcpCtrl.bPendingKsvListReady = bKsvListReady;
+    paramsHdcpCtrl.cmd |= DRF_DEF(0073_CTRL_SPECIFIC, _HDCP_CTRL, _CMD,
+                                    _FORWARD_KSVLIST_READY);
+
+    provider->rmControl0073(NV0073_CTRL_CMD_SPECIFIC_HDCP_CTRL, &paramsHdcpCtrl,
+                            sizeof paramsHdcpCtrl);
 }
 
 void EvoMainLink::configureSingleStream(NvU32 head,

@@ -55,6 +55,7 @@ typedef NvU32 NvKmsFrameLockHandle;
 typedef NvU32 NvKmsDeferredRequestFifoHandle;
 typedef NvU32 NvKmsSwapGroupHandle;
 typedef NvU32 NvKmsVblankSyncObjectHandle;
+typedef NvU32 NvKmsVblankIntrCallbackHandle;
 
 struct NvKmsSize {
     NvU16 width;
@@ -545,6 +546,36 @@ enum NvKmsInputColorRange {
     NVKMS_INPUT_COLORRANGE_FULL = 2,
 };
 
+enum NvKmsOutputColorimetry {
+    NVKMS_OUTPUT_COLORIMETRY_DEFAULT = 0,
+
+    NVKMS_OUTPUT_COLORIMETRY_SRGB   = 1,
+
+    NVKMS_OUTPUT_COLORIMETRY_BT601  = 2,
+
+    NVKMS_OUTPUT_COLORIMETRY_BT709  = 3,
+
+    NVKMS_OUTPUT_COLORIMETRY_BT2020 = 4,
+
+    NVKMS_OUTPUT_COLORIMETRY_BT2100 = 5,
+};
+
+/*! Values for the NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE attribute. */
+enum NvKmsDpyAttributeRequestedColorSpaceValue {
+    NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_RGB = 0,
+    NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_YCbCr422 = 1,
+    NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_SPACE_YCbCr444 = 2,
+};
+
+/*!
+ *  * Values for the NV_KMS_DPY_ATTRIBUTE_REQUESTED_COLOR_RANGE and
+ *  * NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_RANGE attributes.
+ *  */
+enum NvKmsDpyAttributeColorRangeValue {
+    NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_FULL = 0,
+    NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_LIMITED = 1,
+};
+
 enum NvKmsInputColorSpace {
     /* Unknown colorspace; no de-gamma will be applied */
     NVKMS_INPUT_COLORSPACE_NONE = 0,
@@ -558,19 +589,17 @@ enum NvKmsInputColorSpace {
     /* sRGB colorspace with sRGB gamma transfer function */
     NVKMS_INPUT_COLORSPACE_SRGB = 3,
 
+    /* Rec601 colorspace with Rec601 gamma transfer function */
+    NVKMS_INPUT_COLORSPACE_BT601 = 4,
+
     /* Rec709 colorspace with Rec709 gamma transfer function */
-    NVKMS_INPUT_COLORSPACE_REC709 = 4,
+    NVKMS_INPUT_COLORSPACE_BT709 = 5,
 
     /* Rec709 colorspace with linear (identity) gamma */
-    NVKMS_INPUT_COLORSPACE_REC709_LINEAR = 5
-};
+    NVKMS_INPUT_COLORSPACE_BT709_LINEAR = 6,
 
-enum NvKmsOutputColorSpace {
-    /* Unknown colorspace; no re-gamma will be applied */
-    NVKMS_OUTPUT_COLORSPACE_NONE = 0,
-
-    /* sRGB gamma transfer function will be applied */
-    NVKMS_OUTPUT_COLORSPACE_SRGB = 1
+    /* Rec2020 colorspace with Rec2020 gamma transfer function */
+    NVKMS_INPUT_COLORSPACE_BT2020 = 7,
 };
 
 enum NvKmsOutputTf {
@@ -660,5 +689,7 @@ struct NvKmsSuperframeInfo {
         NvU16 height;
     } view[NVKMS_MAX_SUPERFRAME_VIEWS];
 };
+
+typedef void (*NVVBlankIntrCallbackProc)(NvU64 param1, NvU64 param2);
 
 #endif /* NVKMS_API_TYPES_H */

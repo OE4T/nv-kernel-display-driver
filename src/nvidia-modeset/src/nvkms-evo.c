@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2014 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2014 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -58,6 +58,7 @@
 #include <ctrl/ctrl5070/ctrl5070system.h> // NV5070_CTRL_CMD_SYSTEM_GET_CAPS_V2
 #include <ctrl/ctrl5070/ctrl5070or.h> // NV5070_CTRL_CMD_SET_SOR_FLUSH_MODE
 #include <ctrl/ctrl0073/ctrl0073dp.h> // NV0073_CTRL_DP_CTRL
+#include <class/clc370_notification.h> // NVC370_NOTIFIERS_RG_VBLANK_NOTIFICATION
 
 #include "nvkms.h"
 #include "nvkms-private.h"
@@ -2130,7 +2131,7 @@ NvBool nvChooseCurrentColorSpaceAndRangeEvo(
     const NVDpyEvoRec *pDpyEvo,
     const NVHwModeTimingsEvo *pHwTimings,
     NvU8 hdmiFrlBpc,
-    enum NvKmsOutputTf tf,
+    enum NvKmsOutputColorimetry colorimetry,
     const enum NvKmsDpyAttributeRequestedColorSpaceValue requestedColorSpace,
     const enum NvKmsDpyAttributeColorRangeValue requestedColorRange,
     enum NvKmsDpyAttributeCurrentColorSpaceValue *pCurrentColorSpace,
@@ -2146,11 +2147,11 @@ NvBool nvChooseCurrentColorSpaceAndRangeEvo(
     const NVColorFormatInfoRec colorFormatsInfo =
         nvGetColorFormatInfo(pDpyEvo);
 
-    // XXX HDR TODO: Handle other transfer functions
+    // XXX HDR TODO: Handle other colorimetries
     // XXX HDR TODO: Handle YUV
-    if (tf == NVKMS_OUTPUT_TF_PQ) {
+    if (colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT2100) {
         /*
-         * If the head is currently in PQ output mode, we override the
+         * If the head is currently has BT2100 colorimetry, we override the
          * requested color space with RGB.  We cannot support yuv420Mode in
          * that configuration, so fail in that case.
          */
@@ -2210,8 +2211,8 @@ NvBool nvChooseCurrentColorSpaceAndRangeEvo(
     if ((newColorSpace == NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_SPACE_YCbCr444) ||
         (newColorSpace == NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_SPACE_YCbCr422) ||
         (newColorSpace == NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_SPACE_YCbCr420) ||
-        (tf == NVKMS_OUTPUT_TF_PQ)) {
-        newColorRange = NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_LIMITED;
+        (colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT2100)) {
+           newColorRange = NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_LIMITED;
     } else if ((newColorSpace == NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_SPACE_RGB) &&
                (newColorBpc == NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_6)) {
         /* At depth 18 only RGB and full range are allowed */
@@ -2234,9 +2235,9 @@ NvBool nvChooseCurrentColorSpaceAndRangeEvo(
     }
 
     // 10 BPC required for HDR
-    // XXX HDR TODO: Handle other transfer functions
+    // XXX HDR TODO: Handle other colorimetries
     // XXX HDR TODO: Handle YUV
-    if ((tf == NVKMS_OUTPUT_TF_PQ) &&
+    if ((colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT2100) &&
         (newColorBpc < NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_BPC_10)) {
         return FALSE;
     }
@@ -2251,6 +2252,7 @@ NvBool nvChooseCurrentColorSpaceAndRangeEvo(
 void nvUpdateCurrentHardwareColorSpaceAndRangeEvo(
     NVDispEvoPtr pDispEvo,
     const NvU32 head,
+    enum NvKmsOutputColorimetry colorimetry,
     const enum NvKmsDpyAttributeCurrentColorSpaceValue colorSpace,
     const enum NvKmsDpyAttributeColorRangeValue colorRange,
     NVEvoUpdateState *pUpdateState)
@@ -2261,7 +2263,7 @@ void nvUpdateCurrentHardwareColorSpaceAndRangeEvo(
 
     nvAssert(pConnectorEvo != NULL);
 
-    if (pHeadState->tf == NVKMS_OUTPUT_TF_PQ) {
+    if (colorimetry == NVKMS_OUTPUT_COLORIMETRY_BT2100) {
         nvAssert(pHeadState->timings.yuv420Mode == NV_YUV420_MODE_NONE);
         nvAssert(colorSpace == NV_KMS_DPY_ATTRIBUTE_CURRENT_COLOR_SPACE_RGB);
         nvAssert(colorRange == NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_LIMITED);
@@ -4388,6 +4390,77 @@ void nvEvoPostModesetUnregisterFlipOccurredEvent(NVDispEvoRec *pDispEvo,
         pChannel->completionNotifierEventRefPtr = NULL;
     }
 }
+
+static void
+VBlankNotifierEventDeferredWork(void *dataPtr, NvU32 dataU32)
+{
+    NVVBlankIntrCallbackRec *pVBlankIntrCallback = dataPtr;
+    pVBlankIntrCallback->pCallback(pVBlankIntrCallback->param1,
+        pVBlankIntrCallback->param2);
+}
+
+static void VBlankNotifierEvent(void *arg, void *pEventDataVoid,
+                                    NvU32 hEvent, NvU32 Data, NV_STATUS Status)
+{
+  (void) nvkms_alloc_timer_with_ref_ptr(
+        VBlankNotifierEventDeferredWork, /* callback */
+        arg, /* argument (this is a ref_ptr to NVVBlankIntrCallbackRec) */
+        Data,   /* dataU32 */
+        0);  /* timeout: schedule the work immediately */
+}
+
+NvU32 nvEvoRegisterVBlankEvent(NVDispEvoRec *pDispEvo,
+                               const NvU32 head,
+                               NVVBlankIntrCallbackRec *cbRec)
+{
+    NVDevEvoRec *pDevEvo = pDispEvo->pDevEvo;
+    NVEvoChannelPtr pChannel = pDevEvo->core;
+    NvU32 handle = 0;
+
+    ///* XXX NVKMS TODO: need disp-scope in event */
+    if (pDispEvo->displayOwner != 0) {
+        return 0;
+    }
+
+    nvAssert(cbRec->rmVBlankCallbackHandle == 0);
+
+    handle = nvGenerateUnixRmHandle(&pDevEvo->handleAllocator);
+
+    if (!nvRmRegisterCallback(pDevEvo,
+                              &cbRec->vblankNotifierEventCallback,
+                              cbRec->ref_ptr,
+                              pChannel->pb.channel_handle,
+                              handle,
+                              VBlankNotifierEvent,
+                              NVC370_NOTIFIERS_RG_VBLANK_NOTIFYINDEX(head))) {
+        nvFreeUnixRmHandle(&pDevEvo->handleAllocator, handle);
+        handle = 0;
+    }
+
+    return handle;
+}
+
+void nvEvoUnregisterVBlankEvent(NVDispEvoRec *pDispEvo, NvU32 handle)
+{
+    NVDevEvoRec *pDevEvo = pDispEvo->pDevEvo;
+    NVEvoChannelPtr pChannel = pDevEvo->core;
+
+    ///* XXX NVKMS TODO: need disp-scope in event */
+    if (pDispEvo->displayOwner != 0) {
+        return;
+    }
+
+    if (handle == 0) {
+        return;
+    }
+
+    nvRmApiFree(nvEvoGlobal.clientHandle,
+                pChannel->pb.channel_handle,
+                handle);
+    nvFreeUnixRmHandle(&pDevEvo->handleAllocator,
+                       handle);
+}
+
 
 static NvBool InitApiHeadState(NVDevEvoRec *pDevEvo)
 {

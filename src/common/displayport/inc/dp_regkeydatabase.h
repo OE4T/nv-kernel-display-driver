@@ -34,6 +34,7 @@
 #include "dp_auxdefs.h"
 
 // Regkey Names
+#define NV_DP_REGKEY_DISABLE_QSES                     "DISABLE_QSES"
 #define NV_DP_REGKEY_ENABLE_AUDIO_BEYOND_48K          "ENABLE_AUDIO_BEYOND48K"
 #define NV_DP_REGKEY_OVERRIDE_DPCD_REV                "OVERRIDE_DPCD_REV"
 #define NV_DP_REGKEY_DISABLE_SSC                      "DISABLE_SSC"
@@ -85,6 +86,7 @@ struct DP_REGKEY_DATABASE
 {
     bool  bInitialized; // set to true after the first EvoMainLink instance is constructed
     // Below are regkey values
+    bool  bQsesDisabled;
     bool  bAudioBeyond48kEnabled;
     NvU32 dpcdRevOveride;
     bool  bSscDisabled;

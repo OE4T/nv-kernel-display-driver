@@ -330,6 +330,7 @@ namespace DisplayPort
         virtual void destroy() = 0;                 // Destroy the group object
 
         // Toggles the encryption status for the stream.
+        virtual bool hdcpSetEncrypted(bool encrypted, NvU8 streamType = NV0073_CTRL_SPECIFIC_HDCP_CTRL_HDCP22_TYPE_0, NvBool bForceClear = NV_FALSE, NvBool bAddStreamBack = NV_FALSE) = 0;
         // Returns whether encryption is currently enabled.
         virtual bool hdcpGetEncrypted() = 0;
 
@@ -657,6 +658,8 @@ namespace DisplayPort
         virtual void resetDp11ProtocolForced() = 0;
         virtual bool isDp11ProtocolForced() = 0;
 
+        // Operates at the Link Level. Causes reauthentication of the entire link.
+        virtual void hdcpRenegotiate(NvU64 cN, NvU64 cKsv) = 0;
         virtual bool getHDCPAbortCodesDP12(NvU32 &hdcpAbortCodesDP12) = 0;
 
         virtual bool getOuiSink(unsigned &ouiId, char * modelName,

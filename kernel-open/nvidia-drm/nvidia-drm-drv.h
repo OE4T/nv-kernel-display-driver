@@ -24,6 +24,7 @@
 #define __NVIDIA_DRM_DRV_H__
 
 #include "nvidia-drm-conftest.h"
+#include "nv-kthread-q.h"
 
 #if defined(NV_DRM_AVAILABLE)
 

@@ -153,11 +153,15 @@ struct nv_drm_device {
     struct drm_property *nv_out_fence_property;
     struct drm_property *nv_input_colorspace_property;
 
+    struct drm_property *nv_input_colorrange_property;
+    struct drm_property *nv_output_colorrange_property;
 #if defined(NV_DRM_HAS_HDR_OUTPUT_METADATA)
     struct drm_property *nv_hdr_output_metadata_property;
 #endif
 
     struct nv_drm_device *next;
+
+    nv_kthread_q_t nv_kthread_q;
 };
 
 static inline struct nv_drm_device *to_nv_device(

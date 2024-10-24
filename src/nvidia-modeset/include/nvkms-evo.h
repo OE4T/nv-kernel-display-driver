@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2013-2015 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2013-2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -237,7 +237,7 @@ NvBool nvChooseCurrentColorSpaceAndRangeEvo(
     const NVDpyEvoRec *pDpyEvo,
     const NVHwModeTimingsEvo *pHwTimings,
     NvU8 hdmiFrlBpc,
-    enum NvKmsOutputTf tf,
+    enum NvKmsOutputColorimetry colorimetry,
     const enum NvKmsDpyAttributeRequestedColorSpaceValue requestedColorSpace,
     const enum NvKmsDpyAttributeColorRangeValue requestedColorRange,
     enum NvKmsDpyAttributeCurrentColorSpaceValue *pCurrentColorSpace,
@@ -247,6 +247,7 @@ NvBool nvChooseCurrentColorSpaceAndRangeEvo(
 void nvUpdateCurrentHardwareColorSpaceAndRangeEvo(
     NVDispEvoPtr pDispEvo,
     const NvU32 head,
+    const enum NvKmsOutputColorimetry colorimetry,
     const enum NvKmsDpyAttributeCurrentColorSpaceValue colorSpace,
     const enum NvKmsDpyAttributeColorRangeValue colorRange,
     NVEvoUpdateState *pUpdateState);
@@ -358,6 +359,12 @@ void nvEvoPostModesetUnregisterFlipOccurredEvent(NVDispEvoRec *pDispEvo,
                                                  const NvU32 head,
                                                  const NVEvoModesetUpdateState
                                                      *pModesetUpdate);
+
+NvU32 nvEvoRegisterVBlankEvent(NVDispEvoRec *pDispEvo,
+                               const NvU32 head,
+                               NVVBlankIntrCallbackRec *cbRec);
+
+void nvEvoUnregisterVBlankEvent(NVDispEvoRec *pDispEvo, NvU32 handle);
 
 void nvEvoLockStateSetMergeMode(NVDispEvoPtr pDispEvo);
 

@@ -2631,6 +2631,9 @@ static NvBool NvKmsKapiOverlayLayerConfigToKms(
     params->layer[layer].colorSpace.val = layerConfig->inputColorSpace;
     params->layer[layer].colorSpace.specified = TRUE;
 
+    params->layer[layer].colorRange.val = layerConfig->inputColorRange;
+    params->layer[layer].colorRange.specified = TRUE;
+
     AssignHDRMetadataConfig(layerConfig, layer, params);
 
     if (commit) {
@@ -2730,6 +2733,9 @@ static NvBool NvKmsKapiPrimaryLayerConfigToKms(
 
     params->layer[NVKMS_MAIN_LAYER].colorSpace.val = layerConfig->inputColorSpace;
     params->layer[NVKMS_MAIN_LAYER].colorSpace.specified = TRUE;
+
+    params->layer[NVKMS_MAIN_LAYER].colorRange.val = layerConfig->inputColorRange;
+    params->layer[NVKMS_MAIN_LAYER].colorRange.specified = TRUE;
 
     AssignHDRMetadataConfig(layerConfig, NVKMS_MAIN_LAYER, params);
 
@@ -2895,6 +2901,9 @@ static NvBool NvKmsKapiRequestedModeSetConfigToKms(
 
         NvKmsKapiDisplayModeToKapi(&headModeSetConfig->mode, &paramsHead->mode);
 
+        paramsHead->colorRange = headModeSetConfig->outputColorRange;
+        paramsHead->colorRangeSpecified = NV_TRUE;
+
         NvKmsKapiCursorConfigToKms(&headRequestedConfig->cursorRequestedConfig,
                                    &paramsHead->flip,
                                    NV_TRUE /* bFromKmsSetMode */);
@@ -2922,6 +2931,9 @@ static NvBool NvKmsKapiRequestedModeSetConfigToKms(
 
         paramsHead->flip.tf.val = tf;
         paramsHead->flip.tf.specified = NV_TRUE;
+
+        paramsHead->flip.colorimetry.specified = NV_TRUE;
+        paramsHead->flip.colorimetry.val = headModeSetConfig->colorimetry;
 
         paramsHead->viewPortSizeIn.width =
             headModeSetConfig->mode.timings.hVisible;
@@ -3112,6 +3124,12 @@ static NvBool KmsFlip(
         flipParams->tf.val = tf;
         flipParams->tf.specified = NV_TRUE;
 
+        flipParams->colorimetry.specified =
+            headRequestedConfig->flags.colorimetryChanged;
+        if (flipParams->colorimetry.specified) {
+            flipParams->colorimetry.val = headModeSetConfig->colorimetry;
+        }
+
         if (headModeSetConfig->vrrEnabled) {
             params->request.allowVrr = NV_TRUE;
         }
@@ -3209,7 +3227,8 @@ static NvBool ApplyModeSetConfig(
         bRequiredModeset =
             headRequestedConfig->flags.activeChanged   ||
             headRequestedConfig->flags.displaysChanged ||
-            headRequestedConfig->flags.modeChanged;
+            headRequestedConfig->flags.modeChanged     ||
+            headRequestedConfig->flags.colorrangeChanged;
 
         /*
          * NVKMS flip ioctl could not validate flip configuration for an
@@ -3374,6 +3393,94 @@ static void nvKmsKapiSetSuspendResumeCallback
     pSuspendResumeFunc = function;
 }
 
+static struct NvKmsKapiVblankIntrCallback*
+RegisterVblankIntrCallback(struct NvKmsKapiDevice *device,
+                           const NvU32 head,
+                           NVVBlankIntrCallbackProc pCallbackProc,
+                           NvU64 param1,
+                           NvU64 param2)
+{
+    struct NvKmsRegisterVblankIntrCallbackParams params = { };
+    NvBool status;
+
+    struct NvKmsKapiVblankIntrCallback *pCallback =
+        nvKmsKapiCalloc(1, sizeof(*pCallback));
+
+    if (pCallback == NULL) {
+        nvKmsKapiLogDebug(
+            "Failed to allocate memory for NVKMS vblank callback object on "
+            "NvKmsKapiDevice 0x%p",
+            device);
+        goto failed;
+    }
+
+    if (device->hKmsDevice == 0x0) {
+        goto done;
+    }
+
+    /* Create NVKMS surface */
+
+    params.request.deviceHandle = device->hKmsDevice;
+    params.request.dispHandle = device->hKmsDisp;
+    params.request.head = head;
+    params.request.pCallback = pCallbackProc;
+    params.request.param1 = param1;
+    params.request.param2 = param2;
+
+    status = nvkms_ioctl_from_kapi(device->pKmsOpen,
+                                   NVKMS_IOCTL_REGISTER_VBLANK_INTR_CALLBACK,
+                                   &params, sizeof(params));
+    if (!status) {
+        nvKmsKapiLogDeviceDebug(
+            device,
+            "Failed to register NVKMS vblank callback");
+        goto failed;
+    }
+
+    pCallback->hKmsHandle = params.reply.callbackHandle;
+
+done:
+    return pCallback;
+
+failed:
+    nvKmsKapiFree(pCallback);
+
+    return NULL;
+}
+
+static void UnregisterVblankIntrCallback(
+    struct NvKmsKapiDevice *device,
+    const NvU32 head,
+    struct NvKmsKapiVblankIntrCallback *pCallback)
+{
+    struct NvKmsUnregisterVblankIntrCallbackParams params = { };
+    NvBool status;
+
+    if (device->hKmsDevice == 0x0) {
+        goto done;
+    }
+
+    params.request.deviceHandle  = device->hKmsDevice;
+    params.request.dispHandle = device->hKmsDisp;
+    params.request.head = head;
+    params.request.callbackHandle = pCallback->hKmsHandle;
+
+    status = nvkms_ioctl_from_kapi(device->pKmsOpen,
+                                   NVKMS_IOCTL_UNREGISTER_VBLANK_INTR_CALLBACK,
+                                   &params, sizeof(params));
+
+    if (!status) {
+        nvKmsKapiLogDeviceDebug(
+            device,
+            "Failed to unregister NVKMS vblank callback registered for "
+            "NvKmsKapiVblankIntrCallback 0x%p",
+            pCallback);
+    }
+
+done:
+    nvKmsKapiFree(pCallback);
+}
+
 NvBool nvKmsKapiGetFunctionsTableInternal
 (
     struct NvKmsKapiFunctionsTable *funcsTable
@@ -3455,6 +3562,8 @@ NvBool nvKmsKapiGetFunctionsTableInternal
     funcsTable->setSemaphoreSurfaceValue =
         nvKmsKapiSetSemaphoreSurfaceValue;
     funcsTable->setSuspendResumeCallback = nvKmsKapiSetSuspendResumeCallback;
+    funcsTable->RegisterVblankIntrCallback = RegisterVblankIntrCallback;
+    funcsTable->UnregisterVblankIntrCallback = UnregisterVblankIntrCallback;
 
     return NV_TRUE;
 }

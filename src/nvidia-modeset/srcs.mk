@@ -115,6 +115,7 @@ SRCS_CXX += ../common/displayport/src/dp_timer.cpp
 SRCS_CXX += ../common/displayport/src/dp_vrr.cpp
 SRCS_CXX += ../common/displayport/src/dp_wardatabase.cpp
 SRCS_CXX += ../common/displayport/src/dp_watermark.cpp
+SRCS_CXX += ../common/displayport/src/dp_qse.cpp
 SRCS_CXX += ../common/displayport/src/dptestutil/dp_testmessage.cpp
 SRCS += ../common/modeset/hdmipacket/nvhdmipkt.c
 SRCS += ../common/modeset/hdmipacket/nvhdmipkt_0073.c

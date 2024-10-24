@@ -143,6 +143,7 @@ struct NvKmsPerOpenDisp {
     struct NvKmsPerOpenConnector connector[NVKMS_MAX_CONNECTORS_PER_DISP];
     NVEvoApiHandlesRec           vblankSyncObjectHandles[NVKMS_MAX_HEADS_PER_DISP];
     NVEvoApiHandlesRec           vblankCallbackHandles[NVKMS_MAX_HEADS_PER_DISP];
+    NVEvoApiHandlesRec           vblankIntrCallbackHandles[NVKMS_MAX_HEADS_PER_DISP];
 };
 
 struct NvKmsPerOpenDev {
@@ -685,6 +686,8 @@ static void ClearPerOpenDisp(
     nvEvoDestroyApiHandles(&pOpenDisp->connectorHandles);
 
     for (NvU32 i = 0; i < NVKMS_MAX_HEADS_PER_DISP; i++) {
+        NVVBlankIntrCallbackRec *pCallback;
+
         nvEvoDestroyApiHandles(&pOpenDisp->vblankSyncObjectHandles[i]);
 
         FOR_ALL_POINTERS_IN_EVO_API_HANDLES(&pOpenDisp->vblankCallbackHandles[i],
@@ -692,6 +695,13 @@ static void ClearPerOpenDisp(
             nvRemoveUnicastEvent(pCallbackData->pUserData);
         }
         nvEvoDestroyApiHandles(&pOpenDisp->vblankCallbackHandles[i]);
+
+        FOR_ALL_POINTERS_IN_EVO_API_HANDLES(&pOpenDisp->vblankIntrCallbackHandles[i],
+                                            pCallback, callback) {
+            nvApiHeadUnregisterVBlankIntrCallback(pOpenDisp->pDispEvo,
+                                                  pCallback);
+        }
+        nvEvoDestroyApiHandles(&pOpenDisp->vblankIntrCallbackHandles[i]);
     }
 
     nvEvoDestroyApiHandle(&pOpenDev->dispHandles, pOpenDisp->nvKmsApiHandle);
@@ -766,7 +776,13 @@ static NvBool InitPerOpenDisp(
                                  NVKMS_MAX_VBLANK_SYNC_OBJECTS_PER_HEAD)) {
             goto fail;
         }
+
+        if (!nvEvoInitApiHandles(&pOpenDisp->vblankIntrCallbackHandles[i],
+                                 NVKMS_MAX_VBLANK_SYNC_OBJECTS_PER_HEAD)) {
+            goto fail;
+        }
     }
+
 
     if (!AllocPerOpenFrameLock(pOpen, pOpenDisp)) {
         goto fail;
@@ -3984,6 +4000,68 @@ static NvBool NotifyVblank(
     return NV_TRUE;
 }
 
+static NvBool RegisterVblankIntrCallback(struct NvKmsPerOpen *pOpen,
+                                         void *pParamsVoid)
+{
+    NvKmsVblankIntrCallbackHandle callbackHandle;
+    struct NvKmsRegisterVblankIntrCallbackParams *pParams = pParamsVoid;
+    struct NvKmsPerOpenDisp* pOpenDisp =
+            GetPerOpenDisp(pOpen, pParams->request.deviceHandle,
+                           pParams->request.dispHandle);
+
+    NVVBlankIntrCallbackRec *pCallback =
+        nvApiHeadRegisterVBlankIntrCallback(pOpenDisp->pDispEvo,
+                                            pParams->request.head,
+                                            pParams->request.pCallback,
+                                            pParams->request.param1,
+                                            pParams->request.param2);
+
+    if (pCallback == NULL) {
+        return FALSE;
+    }
+
+    callbackHandle = nvEvoCreateApiHandle(
+        &pOpenDisp->vblankIntrCallbackHandles[pParams->request.head],
+        pCallback);
+    if (callbackHandle == 0) {
+        nvApiHeadUnregisterVBlankIntrCallback(pOpenDisp->pDispEvo,
+                                              pCallback);
+        return FALSE;
+    }
+
+    pParams->reply.callbackHandle = callbackHandle;
+    return TRUE;
+}
+
+static NvBool UnregisterVblankIntrCallback(struct NvKmsPerOpen *pOpen,
+                                           void *pParamsVoid)
+{
+    struct NvKmsUnregisterVblankIntrCallbackParams *pParams = pParamsVoid;
+    struct NvKmsPerOpenDisp* pOpenDisp =
+            GetPerOpenDisp(pOpen, pParams->request.deviceHandle,
+                           pParams->request.dispHandle);
+    const NvU32 apiHead = pParams->request.head;
+    NVVBlankIntrCallbackRec *pCallback;
+
+    if (apiHead >= ARRAY_LEN(pOpenDisp->vblankIntrCallbackHandles)) {
+        return FALSE;
+    }
+
+    pCallback = nvEvoGetPointerFromApiHandle(
+        &pOpenDisp->vblankIntrCallbackHandles[apiHead],
+        pParams->request.callbackHandle);
+    if (pCallback == NULL) {
+        return FALSE;
+    }
+
+    nvApiHeadUnregisterVBlankIntrCallback(pOpenDisp->pDispEvo,
+                                          pCallback);
+    nvEvoDestroyApiHandle(&pOpenDisp->vblankIntrCallbackHandles[apiHead],
+                          pParams->request.callbackHandle);
+
+    return TRUE;
+}
+
 /*!
  * Perform the ioctl operation requested by the client.
  *
@@ -4098,6 +4176,8 @@ NvBool nvKmsIoctl(
         ENTRY(NVKMS_IOCTL_ENABLE_VBLANK_SYNC_OBJECT, EnableVblankSyncObject),
         ENTRY(NVKMS_IOCTL_DISABLE_VBLANK_SYNC_OBJECT, DisableVblankSyncObject),
         ENTRY(NVKMS_IOCTL_NOTIFY_VBLANK, NotifyVblank),
+        ENTRY(NVKMS_IOCTL_REGISTER_VBLANK_INTR_CALLBACK, RegisterVblankIntrCallback),
+        ENTRY(NVKMS_IOCTL_UNREGISTER_VBLANK_INTR_CALLBACK, UnregisterVblankIntrCallback),
     };
 
     struct NvKmsPerOpen *pOpen = pOpenVoid;

@@ -315,6 +315,11 @@ static inline NVDispEvoPtr AllocDisplay(NVDevEvoPtr pDevEvo)
     pDispEvo->framelock.clients = nvEmptyDpyIdList();
     pDispEvo->framelock.currentServerHead = NV_INVALID_HEAD;
 
+    for (NvU32 apiHead = 0;
+         apiHead < ARRAY_LEN(pDispEvo->vblankIntrCallbackList); apiHead++) {
+
+        nvListInit(&pDispEvo->vblankIntrCallbackList[apiHead]);
+    }
     pDispEvo->ref_ptr = nvkms_alloc_ref_ptr(pDispEvo);
     if (!pDispEvo->ref_ptr) {
         goto fail;

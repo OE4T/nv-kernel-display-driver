@@ -248,6 +248,7 @@ struct NvKmsKapiLayerConfig {
     NvU16 dstWidth, dstHeight;
 
     enum NvKmsInputColorSpace inputColorSpace;
+    enum NvKmsInputColorRange inputColorRange;
 };
 
 struct NvKmsKapiLayerRequestedConfig {
@@ -301,6 +302,10 @@ struct NvKmsKapiHeadModeSetConfig {
     struct NvKmsKapiDisplayMode mode;
 
     NvBool vrrEnabled;
+
+    enum NvKmsOutputColorimetry colorimetry;
+
+    enum NvKmsDpyAttributeColorRangeValue outputColorRange;
 };
 
 struct NvKmsKapiHeadRequestedConfig {
@@ -309,6 +314,8 @@ struct NvKmsKapiHeadRequestedConfig {
         NvBool activeChanged   : 1;
         NvBool displaysChanged : 1;
         NvBool modeChanged     : 1;
+        NvBool colorrangeChanged: 1;
+        NvBool colorimetryChanged  : 1;
     } flags;
 
     struct NvKmsKapiCursorRequestedConfig cursorRequestedConfig;
@@ -1397,6 +1404,18 @@ struct NvKmsKapiFunctionsTable {
     (
         NvKmsKapiSuspendResumeCallbackFunc *function
     );
+
+    struct NvKmsKapiVblankIntrCallback*
+    (*RegisterVblankIntrCallback)(struct NvKmsKapiDevice *device,
+                                  const NvU32 head,
+                                  NVVBlankIntrCallbackProc pCallback,
+                                  NvU64 param1,
+                                  NvU64 param2);
+
+    void (*UnregisterVblankIntrCallback)(
+        struct NvKmsKapiDevice *device,
+        const NvU32 head,
+        struct NvKmsKapiVblankIntrCallback *pCallback);
 };
 
 /** @} */

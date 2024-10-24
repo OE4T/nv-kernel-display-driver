@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015- 2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -216,6 +216,51 @@ done:
     return status;
 }
 
+static void nv_drm_connector_reset(struct drm_connector *connector)
+{
+    struct nv_drm_device *nv_dev = to_nv_device(connector->dev);
+    struct nv_drm_connector_state  * nv_connector_state =
+            nv_drm_calloc(1, sizeof(*nv_connector_state));
+
+    if (!nv_connector_state) {
+        return;
+    }
+
+    __drm_atomic_helper_connector_reset(connector, &nv_connector_state->base);
+}
+
+static struct drm_connector_state* nv_drm_connector_atomic_duplicate_state(struct drm_connector *connector)
+{
+    struct nv_drm_connector_state *nv_drm_old_connector_state =
+           to_nv_drm_connector_state(connector->state);
+
+    struct nv_drm_connector_state *nv_drm_new_connector_state =
+           nv_drm_calloc(1, sizeof(*nv_drm_new_connector_state));
+
+    if (!nv_drm_new_connector_state) {
+        return NULL;
+    }
+
+    __drm_atomic_helper_connector_duplicate_state(connector, &nv_drm_new_connector_state->base);
+
+    nv_drm_new_connector_state->output_colorrange = nv_drm_old_connector_state->output_colorrange;
+    nv_drm_new_connector_state->op_colorrange_changed = false;
+
+    return &nv_drm_new_connector_state->base;
+}
+
+static void nv_drm_connector_atomic_destroy_state(
+            struct drm_connector *connector,
+            struct drm_connector_state *state)
+{
+    struct nv_drm_connector_state *nv_drm_connector_state =
+           to_nv_drm_connector_state(state);
+
+    __drm_atomic_helper_connector_destroy_state(state);
+
+    nv_drm_free(nv_drm_connector_state);
+}
+
 static void __nv_drm_connector_force(struct drm_connector *connector)
 {
     __nv_drm_connector_detect_internal(connector);
@@ -227,17 +272,60 @@ nv_drm_connector_detect(struct drm_connector *connector, bool force)
     return __nv_drm_connector_detect_internal(connector);
 }
 
+static int nv_drm_connector_atomic_get_property(
+           struct drm_connector *connector,
+           const struct drm_connector_state *state,
+           struct drm_property *property,
+           uint64_t *val)
+{
+    struct nv_drm_device *nv_dev = to_nv_device(connector->dev);
+    const struct nv_drm_connector_state *nv_drm_connector_state =
+                   to_nv_drm_connector_state_const(state);
+
+    if (property == nv_dev->nv_output_colorrange_property) {
+        *val = nv_drm_connector_state->output_colorrange;
+    } else {
+        return -EINVAL;
+    }
+
+    return 0;
+}
+
+static int nv_drm_connector_atomic_set_property(
+           struct drm_connector *connector,
+           struct drm_connector_state *state,
+           struct drm_property *property,
+           uint64_t val)
+{
+    struct nv_drm_device *nv_dev = to_nv_device(connector->dev);
+    struct nv_drm_connector_state *nv_drm_connector_state =
+            to_nv_drm_connector_state(state);
+
+    if (property == nv_dev->nv_output_colorrange_property) {
+        if (val != nv_drm_connector_state->output_colorrange) {
+            nv_drm_connector_state->output_colorrange = val;
+            nv_drm_connector_state->op_colorrange_changed = true;
+        }
+    } else {
+       return -EINVAL;
+    }
+
+    return 0;
+}
+
 static struct drm_connector_funcs nv_connector_funcs = {
 #if defined NV_DRM_ATOMIC_HELPER_CONNECTOR_DPMS_PRESENT
     .dpms                   = drm_atomic_helper_connector_dpms,
 #endif
     .destroy                = nv_drm_connector_destroy,
-    .reset                  = drm_atomic_helper_connector_reset,
+    .reset                  = nv_drm_connector_reset,
     .force                  = __nv_drm_connector_force,
     .detect                 = nv_drm_connector_detect,
     .fill_modes             = drm_helper_probe_single_connector_modes,
-    .atomic_duplicate_state = drm_atomic_helper_connector_duplicate_state,
-    .atomic_destroy_state   = drm_atomic_helper_connector_destroy_state,
+    .atomic_duplicate_state = nv_drm_connector_atomic_duplicate_state,
+    .atomic_destroy_state   = nv_drm_connector_atomic_destroy_state,
+    .atomic_get_property    = nv_drm_connector_atomic_get_property,
+    .atomic_set_property    = nv_drm_connector_atomic_set_property,
 };
 
 static int nv_drm_connector_get_modes(struct drm_connector *connector)
@@ -349,10 +437,89 @@ nv_drm_connector_best_encoder(struct drm_connector *connector)
     return NULL;
 }
 
+static int
+nv_drm_connector_atomic_check(struct drm_connector *connector,
+                              struct drm_atomic_state *state)
+{
+    struct drm_connector_state *new_connector_state =
+        drm_atomic_get_new_connector_state(state, connector);
+    struct drm_connector_state *old_connector_state =
+        drm_atomic_get_old_connector_state(state, connector);
+    struct nv_drm_device *nv_dev = to_nv_device(connector->dev);
+
+    const struct nv_drm_connector_state *nv_drm_new_connector_state =
+        to_nv_drm_connector_state_const(new_connector_state);
+
+    const struct nv_drm_connector_state *nv_drm_old_connector_state =
+        to_nv_drm_connector_state_const(old_connector_state);
+
+    struct drm_crtc *crtc = new_connector_state->crtc;
+    struct drm_crtc_state *crtc_state;
+    struct nv_drm_crtc_state *nv_crtc_state;
+    struct NvKmsKapiHeadRequestedConfig *req_config;
+
+    if (!crtc) {
+        return 0;
+    }
+
+    crtc_state = drm_atomic_get_new_crtc_state(state, crtc);
+    nv_crtc_state = to_nv_crtc_state(crtc_state);
+    req_config = &nv_crtc_state->req_config;
+
+    if ((nv_drm_new_connector_state->op_colorrange_changed == true) ||
+         (nv_drm_old_connector_state->output_colorrange != nv_drm_new_connector_state->output_colorrange))  {
+          switch (nv_drm_new_connector_state->output_colorrange) {
+              case NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_FULL:
+              case NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_LIMITED:
+                   req_config->modeSetConfig.outputColorRange =
+                       nv_drm_new_connector_state->output_colorrange;
+
+                   req_config->flags.colorrangeChanged = true;
+                   break;
+           default:
+                   NV_DRM_DEV_LOG_ERR(nv_dev, "Unsupported ouput color range");
+                   return -EINVAL;
+         }
+    }
+
+    req_config->flags.colorimetryChanged =
+        (old_connector_state->colorspace != new_connector_state->colorspace);
+
+    switch (new_connector_state->colorspace) {
+        case DRM_MODE_COLORIMETRY_DEFAULT:
+            req_config->modeSetConfig.colorimetry =
+                NVKMS_OUTPUT_COLORIMETRY_DEFAULT;
+            break;
+        case DRM_MODE_COLORIMETRY_XVYCC_601:
+        case DRM_MODE_COLORIMETRY_SYCC_601:
+        case DRM_MODE_COLORIMETRY_OPYCC_601:
+            req_config->modeSetConfig.colorimetry =
+                NVKMS_OUTPUT_COLORIMETRY_BT601;
+            break;
+        case DRM_MODE_COLORIMETRY_BT709_YCC:
+        case DRM_MODE_COLORIMETRY_XVYCC_709:
+            req_config->modeSetConfig.colorimetry =
+                NVKMS_OUTPUT_COLORIMETRY_BT709;
+            break;
+        case DRM_MODE_COLORIMETRY_BT2020_RGB:
+        case DRM_MODE_COLORIMETRY_BT2020_YCC:
+            req_config->modeSetConfig.colorimetry =
+                NVKMS_OUTPUT_COLORIMETRY_BT2100;
+            break;
+        default:
+            // XXX HDR TODO: Add support for more color spaces
+            NV_DRM_DEV_LOG_ERR(nv_dev, "Unsupported color space");
+            return -EINVAL;
+    }
+
+    return 0;
+}
+
 static const struct drm_connector_helper_funcs nv_connector_helper_funcs = {
     .get_modes    = nv_drm_connector_get_modes,
     .mode_valid   = nv_drm_connector_mode_valid,
     .best_encoder = nv_drm_connector_best_encoder,
+    .atomic_check = nv_drm_connector_atomic_check,
 };
 
 static struct drm_connector*
@@ -363,16 +530,18 @@ nv_drm_connector_new(struct drm_device *dev,
 {
     struct nv_drm_device *nv_dev = to_nv_device(dev);
     struct nv_drm_connector *nv_connector = NULL;
+    struct nv_drm_connector_state *nv_connector_state = NULL;
     int ret = -ENOMEM;
 
     if ((nv_connector = nv_drm_calloc(1, sizeof(*nv_connector))) == NULL) {
         goto failed;
     }
 
-    if ((nv_connector->base.state =
-            nv_drm_calloc(1, sizeof(*nv_connector->base.state))) == NULL) {
+    if ((nv_connector_state = nv_drm_calloc(1, sizeof(*nv_connector_state))) == NULL) {
         goto failed_state_alloc;
     }
+
+    nv_connector->base.state = &nv_connector_state->base;
     nv_connector->base.state->connector = &nv_connector->base;
 
     nv_connector->physicalIndex = physicalIndex;
@@ -403,6 +572,23 @@ nv_drm_connector_new(struct drm_device *dev,
     if (nv_connector->type == NVKMS_CONNECTOR_TYPE_VGA) {
         nv_connector->base.polled =
             DRM_CONNECTOR_POLL_CONNECT | DRM_CONNECTOR_POLL_DISCONNECT;
+    }
+
+    /* attach nvidia defined connector properties */
+    drm_object_attach_property(&nv_connector->base.base,
+                               nv_dev->nv_output_colorrange_property,
+                               NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_FULL);
+
+    if (nv_connector->type == NVKMS_CONNECTOR_TYPE_HDMI) {
+        if (drm_mode_create_hdmi_colorspace_property(&nv_connector->base) == 0) {
+            drm_connector_attach_colorspace_property(&nv_connector->base);
+        }
+        drm_connector_attach_hdr_output_metadata_property(&nv_connector->base);
+    } else if (nv_connector->type == NVKMS_CONNECTOR_TYPE_DP) {
+        if (drm_mode_create_dp_colorspace_property(&nv_connector->base) == 0) {
+            drm_connector_attach_colorspace_property(&nv_connector->base);
+        }
+        drm_connector_attach_hdr_output_metadata_property(&nv_connector->base);
     }
 
     /* Register connector with DRM subsystem */

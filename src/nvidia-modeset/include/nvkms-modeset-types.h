@@ -37,12 +37,12 @@ typedef struct {
     NVDpyIdList dpyIdList;
     NVAttributesSetEvoRec attributes;
     struct NvKmsSetLutCommonParams lut;
-    enum NvKmsOutputColorSpace outputColorSpace;
     NVDispStereoParamsEvoRec stereo;
     NVDscInfoEvoRec dscInfo;
     NVDispHeadInfoFrameStateEvoRec infoFrame;
     NvU8 allowFlipLockGroup;
     enum NvKmsOutputTf tf;
+    enum NvKmsOutputColorimetry colorimetry;
     NvBool colorSpaceSpecified : 1;
     NvBool colorRangeSpecified : 1;
     NvBool hs10bpcHint         : 1;

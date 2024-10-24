@@ -48,6 +48,8 @@
 #include <linux/host1x-next.h>
 #endif
 
+#include <drm/drm_vblank.h>
+
 #if defined(NV_DRM_HAS_HDR_OUTPUT_METADATA)
 static int
 nv_drm_atomic_replace_property_blob_from_id(struct drm_device *dev,
@@ -339,6 +341,9 @@ plane_req_config_update(struct drm_plane *plane,
     req_config->config.inputColorSpace =
         nv_drm_plane_state->input_colorspace;
 
+    req_config->config.inputColorRange =
+        nv_drm_plane_state->input_colorrange;
+
     req_config->config.syncptParams.preSyncptSpecified = false;
     req_config->config.syncptParams.postSyncptRequested = false;
 
@@ -609,6 +614,9 @@ static int nv_drm_plane_atomic_set_property(
     } else if (property == nv_dev->nv_input_colorspace_property) {
         nv_drm_plane_state->input_colorspace = val;
         return 0;
+    } else if (property == nv_dev->nv_input_colorrange_property) {
+        nv_drm_plane_state->input_colorrange = val;
+        return 0;
     }
 #if defined(NV_DRM_HAS_HDR_OUTPUT_METADATA)
     else if (property == nv_dev->nv_hdr_output_metadata_property) {
@@ -637,6 +645,9 @@ static int nv_drm_plane_atomic_get_property(
         return 0;
     } else if (property == nv_dev->nv_input_colorspace_property) {
         *val = nv_drm_plane_state->input_colorspace;
+        return 0;
+    } else if (property == nv_dev->nv_input_colorrange_property) {
+        *val = nv_drm_plane_state->input_colorrange;
         return 0;
     }
 #if defined(NV_DRM_HAS_HDR_OUTPUT_METADATA)
@@ -700,6 +711,7 @@ nv_drm_plane_atomic_duplicate_state(struct drm_plane *plane)
 
     nv_plane_state->fd_user_ptr = nv_old_plane_state->fd_user_ptr;
     nv_plane_state->input_colorspace = nv_old_plane_state->input_colorspace;
+    nv_plane_state->input_colorrange = nv_old_plane_state->input_colorrange;
 
 #if defined(NV_DRM_HAS_HDR_OUTPUT_METADATA)
     nv_plane_state->hdr_output_metadata = nv_old_plane_state->hdr_output_metadata;
@@ -856,7 +868,6 @@ nv_drm_atomic_crtc_duplicate_state(struct drm_crtc *crtc)
     __drm_atomic_helper_crtc_duplicate_state(crtc, &nv_state->base);
 
     INIT_LIST_HEAD(&nv_state->nv_flip->list_entry);
-    INIT_LIST_HEAD(&nv_state->nv_flip->deferred_flip_list);
 
     nv_drm_crtc_duplicate_req_head_modeset_config(
         &(to_nv_crtc_state(crtc->state)->req_config),
@@ -888,6 +899,41 @@ static void nv_drm_atomic_crtc_destroy_state(struct drm_crtc *crtc,
     nv_drm_free(nv_state);
 }
 
+static int nv_drm_crtc_enable_vblank(struct drm_crtc *crtc)
+{
+    struct nv_drm_crtc *nv_crtc = to_nv_crtc(crtc);
+    struct nv_drm_device *nv_dev = to_nv_device(nv_crtc->base.dev);
+
+    while (!mutex_trylock(&nv_crtc->vblank_q_lock)) {
+        cpu_relax();
+    }
+    if (nv_crtc->vblank_enabled) {
+        goto done;
+    }
+    nv_crtc->vblank_enabled = true;
+    nv_kthread_q_schedule_q_item(&nv_dev->nv_kthread_q, &nv_crtc->enable_vblank_q_item);
+done:
+    mutex_unlock(&nv_crtc->vblank_q_lock);
+    return 0;
+}
+
+static void nv_drm_crtc_disable_vblank(struct drm_crtc *crtc)
+{
+    struct nv_drm_crtc *nv_crtc = to_nv_crtc(crtc);
+    struct nv_drm_device *nv_dev = to_nv_device(nv_crtc->base.dev);
+
+    while (!mutex_trylock(&nv_crtc->vblank_q_lock)) {
+        cpu_relax();
+    }
+    if (!nv_crtc->vblank_enabled) {
+        goto done;
+    }
+    nv_crtc->vblank_enabled = false;
+    nv_kthread_q_schedule_q_item(&nv_dev->nv_kthread_q, &nv_crtc->disable_vblank_q_item);
+done:
+    mutex_unlock(&nv_crtc->vblank_q_lock);
+}
+
 static struct drm_crtc_funcs nv_crtc_funcs = {
     .set_config             = drm_atomic_helper_set_config,
     .page_flip              = drm_atomic_helper_page_flip,
@@ -895,6 +941,8 @@ static struct drm_crtc_funcs nv_crtc_funcs = {
     .destroy                = nv_drm_crtc_destroy,
     .atomic_duplicate_state = nv_drm_atomic_crtc_duplicate_state,
     .atomic_destroy_state   = nv_drm_atomic_crtc_destroy_state,
+    .enable_vblank = nv_drm_crtc_enable_vblank,
+    .disable_vblank = nv_drm_crtc_disable_vblank,
 };
 
 /*
@@ -1020,6 +1068,11 @@ static void nv_drm_plane_install_properties(
             NVKMS_INPUT_COLORSPACE_NONE);
     }
 
+    if (nv_dev->nv_input_colorrange_property) {
+        drm_object_attach_property(
+            &plane->base, nv_dev->nv_input_colorrange_property,
+            NVKMS_INPUT_COLORRANGE_DEFAULT);
+    }
 #if defined(NV_DRM_HAS_HDR_OUTPUT_METADATA)
     if (supportsHDR && nv_dev->nv_hdr_output_metadata_property) {
         drm_object_attach_property(
@@ -1166,6 +1219,7 @@ nv_drm_plane_create(struct drm_device *dev,
     plane = &nv_plane->base;
 
     nv_plane->defaultCompositionMode = defaultCompositionMode;
+    nv_plane->head = head;
     nv_plane->layer_idx = layer_idx;
 
     if ((nv_plane_state =
@@ -1235,6 +1289,44 @@ failed:
     return ERR_PTR(ret);
 }
 
+void nv_drm_crtc_vblank_callback(NvU64 param1, NvU64 param2)
+{
+    struct nv_drm_crtc *nv_crtc = (void*)(NvUPtr)param1;
+    struct drm_crtc *crtc = &nv_crtc->base;
+
+    drm_handle_vblank(crtc->dev, drm_crtc_index(crtc));
+}
+
+static void nv_drm_vblank_enable_fn(void *t)
+{
+    struct nv_drm_crtc *nv_crtc = t;
+    struct nv_drm_device *nv_dev = to_nv_device(nv_crtc->base.dev);
+
+    mutex_lock(&nv_crtc->vblank_q_lock);
+    if (nv_crtc->vblank_enabled &&
+            (nv_crtc->vblankIntrCallback == NULL)) {
+        nv_crtc->vblankIntrCallback =
+            nvKms->RegisterVblankIntrCallback(nv_dev->pDevice, nv_crtc->head,
+                nv_drm_crtc_vblank_callback, (NvU64)(NvUPtr)nv_crtc, 0);
+    }
+    mutex_unlock(&nv_crtc->vblank_q_lock);
+}
+
+static void nv_drm_vblank_disable_fn(void *t)
+{
+    struct nv_drm_crtc *nv_crtc = t;
+    struct nv_drm_device *nv_dev = to_nv_device(nv_crtc->base.dev);
+
+    mutex_lock(&nv_crtc->vblank_q_lock);
+    if (!nv_crtc->vblank_enabled &&
+            (nv_crtc->vblankIntrCallback != NULL)) {
+        nvKms->UnregisterVblankIntrCallback(nv_dev->pDevice, nv_crtc->head,
+            nv_crtc->vblankIntrCallback);
+        nv_crtc->vblankIntrCallback = NULL;
+    }
+    mutex_unlock(&nv_crtc->vblank_q_lock);
+}
+
 /*
  * Add drm crtc for given head and supported enum NvKmsSurfaceMemoryFormats.
  */
@@ -1261,8 +1353,11 @@ static struct drm_crtc *__nv_drm_crtc_create(struct nv_drm_device *nv_dev,
 
     nv_crtc->head = head;
     INIT_LIST_HEAD(&nv_crtc->flip_list);
-    spin_lock_init(&nv_crtc->flip_list_lock);
+    mutex_init(&nv_crtc->vblank_q_lock);
     nv_crtc->modeset_permission_filep = NULL;
+
+    nv_kthread_q_item_init(&nv_crtc->disable_vblank_q_item, nv_drm_vblank_disable_fn, nv_crtc);
+    nv_kthread_q_item_init(&nv_crtc->enable_vblank_q_item, nv_drm_vblank_enable_fn, nv_crtc);
 
     ret = drm_crtc_init_with_planes(nv_dev->dev,
                                     &nv_crtc->base,

@@ -120,6 +120,10 @@ struct NvKmsKapiSurface {
     NvKmsSurfaceHandle hKmsHandle;
 };
 
+struct NvKmsKapiVblankIntrCallback {
+    NvKmsVblankIntrCallbackHandle hKmsHandle;
+};
+
 static inline void *nvKmsKapiCalloc(size_t nmem, size_t size)
 {
     return nvInternalAlloc(nmem * size, NV_TRUE);

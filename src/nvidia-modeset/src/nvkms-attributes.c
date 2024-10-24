@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2013 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2013 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -609,7 +609,6 @@ static void DpyPostColorSpaceOrRangeSetEvo(NVDpyEvoPtr pDpyEvo)
     NVDispEvoRec *pDispEvo = pDpyEvo->pDispEvo;
     NVDispApiHeadStateEvoRec *pApiHeadState;
     NvU8 hdmiFrlBpc;
-    enum NvKmsOutputTf tf;
     NvU32 head;
 #if defined(DEBUG)
     NvU32 hwHead;
@@ -625,12 +624,10 @@ static void DpyPostColorSpaceOrRangeSetEvo(NVDpyEvoPtr pDpyEvo)
 
     head = nvGetPrimaryHwHead(pDispEvo, pDpyEvo->apiHead);
     hdmiFrlBpc = pDispEvo->headState[head].hdmiFrlBpc;
-    tf = pDispEvo->headState[head].tf;
 #if defined(DEBUG)
     FOR_EACH_EVO_HW_HEAD_IN_MASK(pApiHeadState->hwHeadsMask, hwHead) {
         nvAssert(pDispEvo->headState[head].timings.yuv420Mode ==
                  pDispEvo->headState[hwHead].timings.yuv420Mode);
-        nvAssert(tf == pDispEvo->headState[hwHead].tf);
     }
 #endif
 
@@ -641,7 +638,7 @@ static void DpyPostColorSpaceOrRangeSetEvo(NVDpyEvoPtr pDpyEvo)
     if (!nvChooseCurrentColorSpaceAndRangeEvo(pDpyEvo,
                                               &pDispEvo->headState[head].timings,
                                               hdmiFrlBpc,
-                                              tf,
+                                              pApiHeadState->colorimetry,
                                               pDpyEvo->requestedColorSpace,
                                               pDpyEvo->requestedColorRange,
                                               &colorSpace,
@@ -670,6 +667,7 @@ static void DpyPostColorSpaceOrRangeSetEvo(NVDpyEvoPtr pDpyEvo)
 
         nvUpdateCurrentHardwareColorSpaceAndRangeEvo(pDispEvo,
                                                      head,
+                                                     pApiHeadState->colorimetry,
                                                      pApiHeadState->attributes.colorSpace,
                                                      pApiHeadState->attributes.colorRange,
                                                      &updateState);

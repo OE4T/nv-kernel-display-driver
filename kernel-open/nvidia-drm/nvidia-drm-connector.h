@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2016 - 2024, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -75,6 +75,24 @@ static inline struct nv_drm_connector *to_nv_connector(
         return NULL;
     }
     return container_of(connector, struct nv_drm_connector, base);
+}
+
+struct nv_drm_connector_state {
+       struct drm_connector_state base;
+       enum NvKmsDpyAttributeColorRangeValue  output_colorrange;
+       NvBool op_colorrange_changed;
+};
+
+static inline struct nv_drm_connector_state *to_nv_drm_connector_state(
+                     struct drm_connector_state *state)
+{
+    return container_of(state, struct nv_drm_connector_state, base);
+}
+
+static inline const struct nv_drm_connector_state *to_nv_drm_connector_state_const(
+                           const struct drm_connector_state *state)
+{
+    return container_of(state, const struct nv_drm_connector_state, base);
 }
 
 static inline void nv_drm_connector_mark_connection_status_dirty(

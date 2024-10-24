@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2014 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2014 - 2024 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -175,6 +175,8 @@ void nvInitFlipEvoHwState(
 {
     NVDispEvoRec *pDispEvo = pDevEvo->gpus[sd].pDispEvo;
     const NVEvoSubDevHeadStateRec *pSdHeadState;
+    const NVDispHeadStateEvoRec *pHeadState;
+
     NvU32 i;
 
     nvClearFlipEvoHwState(pFlipState);
@@ -184,6 +186,7 @@ void nvInitFlipEvoHwState(
     }
 
     pSdHeadState = &pDevEvo->gpus[sd].headState[head];
+    pHeadState = &pDispEvo->headState[head];
 
     pFlipState->viewPortPointIn = pSdHeadState->viewPortPointIn;
     pFlipState->cursor = pSdHeadState->cursor;
@@ -208,6 +211,8 @@ void nvInitFlipEvoHwState(
 
     pFlipState->disableMidFrameAndDWCFWatermark =
         pSdHeadState->targetDisableMidFrameAndDWCFWatermark;
+
+    pFlipState->colorimetry = pHeadState->colorimetry;
 }
 
 
@@ -223,7 +228,8 @@ NvBool nvIsLayerDirty(const struct NvKmsFlipCommonParams *pParams,
            pParams->layer[layer].compositionParams.specified ||
            pParams->layer[layer].csc.specified ||
            pParams->layer[layer].hdr.specified ||
-           pParams->layer[layer].colorSpace.specified;
+           pParams->layer[layer].colorSpace.specified ||
+           pParams->layer[layer].colorRange.specified;
 }
 
 /*!
@@ -974,6 +980,11 @@ NvBool nvUpdateFlipEvoHwState(
         pFlipState->tf = pParams->tf.val;
     }
 
+    if (pParams->colorimetry.specified) {
+        pFlipState->dirty.colorimetry = TRUE;
+        pFlipState->colorimetry = pParams->colorimetry.val;
+    }
+
     for (layer = 0; layer < pDevEvo->head[head].numLayers; layer++) {
         if (layer == NVKMS_MAIN_LAYER) {
             if (!UpdateMainLayerFlipEvoHwState(pOpenDev, pDevEvo, sd, head,
@@ -1562,6 +1573,11 @@ static void UpdateHDR(NVDevEvoPtr pDevEvo,
                          sizeof(struct NvKmsHDRStaticMetadata));
         }
 
+        dirty = TRUE;
+    }
+
+    if (pFlipState->dirty.colorimetry) {
+        pHeadState->colorimetry = pFlipState->colorimetry;
         dirty = TRUE;
     }
 
