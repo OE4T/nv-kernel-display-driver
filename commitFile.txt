@@ -1149,7 +1149,7 @@ c6e78a54a1b8d4ca6fe4b01d83e3199ea41606d7 - src/nvidia/src/kernel/gpu/mem_mgr/con
 f30ae0e8e1e32d0adb7e52b8995c277637b6bc2a - src/nvidia/src/kernel/gpu/mem_mgr/mem_utils.c
 3c463773f2f970b1764edb231d349164fe4341fc - src/nvidia/src/kernel/gpu/mem_mgr/mem_desc.c
 2bb921b462c4b50d1f42b39b4728374c7433c8cb - src/nvidia/src/kernel/gpu/mem_mgr/arch/turing/mem_mgr_tu102_base.c
-5a053caaa8eb655d9e0f7ab42ec1b3f0b72fb787 - src/nvidia/src/kernel/gpu/dce_client/dce_client_rpc.c
+cc1249dcc4c4530c59f0aa314dbcd8f7a69be009 - src/nvidia/src/kernel/gpu/dce_client/dce_client_rpc.c
 7f9874d9af6b937dac888a3ebb55a82c2a5de71b - src/nvidia/src/kernel/gpu/dce_client/dce_client.c
 d5d8ff429d3bda7103bafcb2dca94678efc8ddd8 - src/nvidia/src/kernel/gpu_mgr/gpu_group.c
 719d890f8160efe57e4c3267db65885ebb66cd03 - src/nvidia/src/kernel/gpu_mgr/gpu_db.c
