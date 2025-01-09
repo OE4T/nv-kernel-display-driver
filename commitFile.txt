@@ -745,7 +745,7 @@ b459db8ccf299f7bda0fa9fa18ef1e3aeb2996eb - src/nvidia/generated/g_gpu_user_share
 a1bfb789c1e23bac2b7a31255b7d738e40a290f2 - src/nvidia/generated/g_mem_nvoc.h
 fc7f913eab7ef26b877606e0593928784c3121ec - src/nvidia/generated/g_device_nvoc.c
 d960a819d29d7e968eaab0e7a29897426b7ba646 - src/nvidia/generated/g_io_vaspace_nvoc.h
-261e6dfca63b12cb12e97a2f0c4447a3954dbe0a - src/nvidia/generated/g_rpc-structures.h
+4931d4e65a7efb4c60f03ff13841e1740d4fbcae - src/nvidia/generated/g_rpc-structures.h
 b9f25e208f5ea6f566dbd9cbcaaa30cd0786c31b - src/nvidia/generated/g_client_nvoc.h
 9b0d4695e84ec959790dd553944cb44685c5c251 - src/nvidia/generated/g_event_nvoc.h
 10645f82dd031d0aa6f4a3dfc039ef776f2fdee9 - src/nvidia/generated/g_hal_nvoc.h
@@ -775,7 +775,7 @@ c2eae693c1b8d8502db368048f3b1c45d0576dc5 - src/nvidia/generated/g_chips2halspec_
 0097015ef25011bee849966ef5248d206ab0f816 - src/nvidia/generated/g_gpu_resource_nvoc.h
 b18ed7a5d71571b57266995f0d30317814e8bd6e - src/nvidia/generated/g_gpu_access_nvoc.h
 81f915ae199df67c1884bfc18f3d23f20941af6a - src/nvidia/generated/g_dce_client_nvoc.c
-87510f9f25364673fedfd1d820aedc85852ef5df - src/nvidia/generated/g_rpc-message-header.h
+436c2b21a6d67fed4167b749fd79b85e073d9512 - src/nvidia/generated/g_rpc-message-header.h
 dad5def7d6c24268ac1e1a75038cbf33900745ff - src/nvidia/generated/g_binary_api_nvoc.h
 35889e5f6bdc996fa95c76d05e7b8902328d450b - src/nvidia/generated/g_rs_client_nvoc.h
 92c99fd64caa9f78664ed1fd54313ee82e2cf9c7 - src/nvidia/generated/g_disp_channel_nvoc.h
@@ -827,7 +827,7 @@ bdb198b18c700dc396f73191a8e696d106a1f716 - src/nvidia/generated/g_resource_nvoc.
 c1652e6cc404f23660ee440b61c6d0b9149ff593 - src/nvidia/generated/g_gpu_resource_nvoc.c
 aac0c7df733e179f2a5906ab66b302a5bee82cbe - src/nvidia/generated/g_gpu_db_nvoc.h
 09597f23d6a5440258656be81e7e6709390128f8 - src/nvidia/generated/g_hal_private.h
-5274a731ecccd2ad0e57761831523e25cd742676 - src/nvidia/generated/g_sdk-structures.h
+00757a3a6c876b01e3232b301a120131f194acd5 - src/nvidia/generated/g_sdk-structures.h
 b35821f54f7ec965edd25a60e58d7639cd19df19 - src/nvidia/generated/g_hal_archimpl.h
 f5ad33480e2b73c6ff2bfd586e027f19318a597c - src/nvidia/generated/g_disp_console_mem_nvoc.h
 af86a67a1c33acc193efa6dba8bc46ebe5dbb5eb - src/nvidia/generated/g_gpu_class_list.c
