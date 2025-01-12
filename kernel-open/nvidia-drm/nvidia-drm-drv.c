@@ -71,6 +71,7 @@
 
 #include <linux/pci.h>
 #include <linux/workqueue.h>
+#include <linux/version.h>
 
 /*
  * Commit fcd70cd36b9b ("drm: Split out drm_probe_helper.h")
@@ -244,7 +245,9 @@ static const struct drm_mode_config_funcs nv_mode_config_funcs = {
     .atomic_check  = nv_drm_atomic_check,
     .atomic_commit = nv_drm_atomic_commit,
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
     .output_poll_changed = nv_drm_output_poll_changed,
+#endif
 };
 
 static void nv_drm_event_callback(const struct NvKmsKapiEvent *event)

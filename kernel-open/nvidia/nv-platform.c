@@ -24,6 +24,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <linux/version.h>
 
 #include "nv-platform.h"
 #include "nv-frontend.h"
@@ -1189,7 +1190,11 @@ static int nv_platform_device_probe(struct platform_device *plat_dev)
     return rc;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
 static int nv_platform_device_remove(struct platform_device *plat_dev)
+#else
+static void nv_platform_device_remove(struct platform_device *plat_dev)
+#endif
 {
     int rc = 0;
 
@@ -1203,8 +1208,9 @@ static int nv_platform_device_remove(struct platform_device *plat_dev)
     {
         rc = nv_platform_device_display_remove(plat_dev);
     }
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
     return rc;
+#endif
 }
 
 const struct of_device_id nv_platform_device_table[] =
