@@ -437,6 +437,17 @@ nv_drm_connector_best_encoder(struct drm_connector *connector)
     return NULL;
 }
 
+#if defined(NV_DRM_MODE_CREATE_DP_COLORSPACE_PROPERTY_HAS_SUPPORTED_COLORSPACES_ARG)
+static const NvU32 __nv_drm_connector_supported_colorspaces =
+    BIT(DRM_MODE_COLORIMETRY_XVYCC_601) |
+    BIT(DRM_MODE_COLORIMETRY_SYCC_601) |
+    BIT(DRM_MODE_COLORIMETRY_OPYCC_601) |
+    BIT(DRM_MODE_COLORIMETRY_BT709_YCC) |
+    BIT(DRM_MODE_COLORIMETRY_XVYCC_709) |
+    BIT(DRM_MODE_COLORIMETRY_BT2020_RGB) |
+    BIT(DRM_MODE_COLORIMETRY_BT2020_YCC);
+#endif
+
 static int
 nv_drm_connector_atomic_check(struct drm_connector *connector,
                               struct drm_atomic_state *state)
@@ -580,12 +591,24 @@ nv_drm_connector_new(struct drm_device *dev,
                                NV_KMS_DPY_ATTRIBUTE_COLOR_RANGE_FULL);
 
     if (nv_connector->type == NVKMS_CONNECTOR_TYPE_HDMI) {
+#if defined(NV_DRM_MODE_CREATE_DP_COLORSPACE_PROPERTY_HAS_SUPPORTED_COLORSPACES_ARG)
+        if (drm_mode_create_hdmi_colorspace_property(
+                &nv_connector->base,
+                __nv_drm_connector_supported_colorspaces) == 0) {
+#else
         if (drm_mode_create_hdmi_colorspace_property(&nv_connector->base) == 0) {
+#endif
             drm_connector_attach_colorspace_property(&nv_connector->base);
         }
         drm_connector_attach_hdr_output_metadata_property(&nv_connector->base);
     } else if (nv_connector->type == NVKMS_CONNECTOR_TYPE_DP) {
+#if defined(NV_DRM_MODE_CREATE_DP_COLORSPACE_PROPERTY_HAS_SUPPORTED_COLORSPACES_ARG)
+        if (drm_mode_create_dp_colorspace_property(
+                &nv_connector->base,
+                __nv_drm_connector_supported_colorspaces) == 0) {
+#else
         if (drm_mode_create_dp_colorspace_property(&nv_connector->base) == 0) {
+#endif
             drm_connector_attach_colorspace_property(&nv_connector->base);
         }
         drm_connector_attach_hdr_output_metadata_property(&nv_connector->base);
