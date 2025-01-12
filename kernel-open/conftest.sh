@@ -90,8 +90,8 @@ build_cflags() {
     ISYSTEM=`$CC -print-file-name=include 2> /dev/null`
     BASE_CFLAGS="-O2 -D__KERNEL__ \
 -DKBUILD_BASENAME=\"#conftest$$\" -DKBUILD_MODNAME=\"#conftest$$\" \
--nostdinc -isystem $ISYSTEM \
--Wno-implicit-function-declaration -Wno-strict-prototypes"
+-nostdinc -isystem $ISYSTEM -fshort-wchar \
+-Wno-implicit-function-declaration -Wno-strict-prototypes -Wno-error=incompatible-pointer-types"
 
     if [ "$OUTPUT" != "$SOURCES" ]; then
         OUTPUT_CFLAGS="-I$OUTPUT/include2 -I$OUTPUT/include"
