@@ -290,8 +290,10 @@ static int parse_dsi_properties(const struct device_node *np_dsi, DSI_PANEL_INFO
 {
     u32 temp;
     int ret = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
     const __be32 *p;
     struct property *prop;
+#endif
     struct device_node *np_dsi_panel;
 
     // Get Panel Node from active-panel phandle
@@ -493,7 +495,11 @@ static int parse_dsi_properties(const struct device_node *np_dsi, DSI_PANEL_INFO
         "nvidia,dsi-lvds-bridge", &temp))
         dsi->dsi2lvds_bridge_enable = (bool)temp;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(6, 12, 0)
     of_property_for_each_u32(np_dsi_panel, "nvidia,dsi-dpd-pads", prop, p, temp)
+#else
+    of_property_for_each_u32(np_dsi_panel, "nvidia,dsi-dpd-pads", temp)
+#endif
         dsi->dpd_dsi_pads |= (u32)temp;
 
     if (!of_property_read_u32(np_dsi_panel,
