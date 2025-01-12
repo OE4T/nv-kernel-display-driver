@@ -70,6 +70,7 @@ $(foreach _module, $(NV_KERNEL_MODULES), \
 
 EXTRA_CFLAGS += -I$(src)/common/inc
 EXTRA_CFLAGS += -I$(src)
+EXTRA_CFLAGS += -I$(NV_OOT_SOURCES)/include
 EXTRA_CFLAGS += -Wall $(DEFINES) $(INCLUDES) -Wno-cast-qual -Wno-error -Wno-format-extra-args
 EXTRA_CFLAGS += -D__KERNEL__ -DMODULE -DNVRM
 EXTRA_CFLAGS += -DNV_VERSION_STRING=\"540.4.0\"
@@ -143,7 +144,7 @@ NV_CONFTEST_SCRIPT := $(src)/conftest.sh
 NV_CONFTEST_HEADER := $(obj)/conftest/headers.h
 
 NV_CONFTEST_CMD := /bin/sh $(NV_CONFTEST_SCRIPT) \
- "$(CC)" $(ARCH) $(NV_KERNEL_SOURCES) $(NV_KERNEL_OUTPUT)
+ "$(CC)" $(ARCH) $(NV_KERNEL_SOURCES) $(NV_KERNEL_OUTPUT) $(NV_OOT_SOURCES)
 
 NV_CFLAGS_FROM_CONFTEST := $(shell $(NV_CONFTEST_CMD) build_cflags)
 
@@ -204,8 +205,8 @@ $(eval $(call NV_GENERATE_COMPILE_TEST_HEADER,symbols,$(NV_CONFTEST_SYMBOL_COMPI
 $(eval $(call NV_GENERATE_COMPILE_TEST_HEADER,types,$(NV_CONFTEST_TYPE_COMPILE_TESTS)))
 
 $(obj)/conftest/patches.h: $(NV_CONFTEST_SCRIPT)
-	@mkdir -p $(obj)/conftest
-	@$(NV_CONFTEST_CMD) patch_check > $@
+	mkdir -p $(obj)/conftest
+	$(NV_CONFTEST_CMD) patch_check > $@
 
 
 # Each of these headers is checked for presence with a test #include; a
@@ -314,8 +315,8 @@ NV_HEADER_PRESENCE_PART = $(addprefix $(obj)/conftest/header_presence/,$(addsuff
 # Define a rule to check the header $(1).
 define NV_HEADER_PRESENCE_CHECK
  $$(call NV_HEADER_PRESENCE_PART,$(1)): $$(NV_CONFTEST_SCRIPT) $(obj)/conftest/uts_release
-	@mkdir -p $$(dir $$@)
-	@$$(NV_CONFTEST_CMD) test_kernel_header '$$(NV_CONFTEST_CFLAGS)' '$(1)' > $$@
+	mkdir -p $$(dir $$@)
+	$$(NV_CONFTEST_CMD) test_kernel_header '$$(NV_CONFTEST_CFLAGS)' '$(1)' > $$@
 endef
 
 # Evaluate the rule above for each header in the list.
@@ -323,7 +324,7 @@ $(foreach header,$(NV_HEADER_PRESENCE_TESTS),$(eval $(call NV_HEADER_PRESENCE_CH
 
 # Concatenate all of the parts into headers.h.
 $(obj)/conftest/headers.h: $(call NV_HEADER_PRESENCE_PART,$(NV_HEADER_PRESENCE_TESTS))
-	@cat $^ > $@
+	cat $^ > $@
 
 clean-dirs := $(obj)/conftest
 
@@ -345,7 +346,7 @@ BUILD_SANITY_CHECKS = \
 .PHONY: $(BUILD_SANITY_CHECKS)
 
 $(BUILD_SANITY_CHECKS):
-	@$(NV_CONFTEST_CMD) $@ full_output
+	$(NV_CONFTEST_CMD) $@ full_output
 
 # Perform all sanity checks before generating the conftest headers
 
