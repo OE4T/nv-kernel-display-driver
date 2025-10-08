@@ -4774,6 +4774,7 @@ NV_STATUS NV_API_CALL rm_pmu_perfmon_get_load(
 {
     NV2080_CTRL_PERF_GET_TEGRA_PERFMON_SAMPLE_PARAMS params = { 0 };
     NvU32 clkDomain = devfreq_clk_to_domain(devfreqClk);
+    nv_priv_t *nvp = NV_GET_NV_PRIV(nv);
     RM_API *pRmApi;
     NV_STATUS status;
     void *fp;
@@ -4781,6 +4782,12 @@ NV_STATUS NV_API_CALL rm_pmu_perfmon_get_load(
     if (clkDomain == NV2080_CTRL_CLK_DOMAIN_TEGRA_UNDEFINED)
     {
         return NV_ERR_INVALID_ARGUMENT;
+    }
+
+    if (nvp->dynamic_power.state == NV_DYNAMIC_POWER_STATE_IDLE_INDICATED)
+    {
+        *load = 0;
+        return NV_OK;
     }
 
     NV_ENTER_RM_RUNTIME(sp, fp);
