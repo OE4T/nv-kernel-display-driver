@@ -818,11 +818,11 @@ NV_STATUS osAllocPagesInternal(
     // For carveout, the memory is already reserved so we don't have
     // to allocate memory.
     //
-    if (memdescGetFlag(pMemDesc, MEMDESC_FLAGS_ALLOC_FROM_SCANOUT_CARVEOUT) ||
+    if (memdescIsCarveoutMemory(pMemDesc) ||
         memdescGetFlag(pMemDesc, MEMDESC_FLAGS_GUEST_ALLOCATED))
     {
-        // We only support scanout carveout with contiguous memory.
-        if (memdescGetFlag(pMemDesc, MEMDESC_FLAGS_ALLOC_FROM_SCANOUT_CARVEOUT) &&
+        // We only support carveout with contiguous memory.
+        if (memdescIsCarveoutMemory(pMemDesc) &&
             !memdescGetContiguity(pMemDesc, AT_CPU))
         {
             status = NV_ERR_NOT_SUPPORTED;
@@ -848,7 +848,7 @@ NV_STATUS osAllocPagesInternal(
             cpuCacheAttrib,
             memdescGetGuestId(pMemDesc),
             memdescGetPteArray(pMemDesc, AT_CPU),
-            memdescGetFlag(pMemDesc, MEMDESC_FLAGS_ALLOC_FROM_SCANOUT_CARVEOUT),
+            memdescIsCarveoutMemory(pMemDesc),
             &pMemData);
     }
     else
@@ -3047,7 +3047,7 @@ osIovaMap
     // address is same as the DMA address.
     //
     //
-    if (memdescGetFlag(pIovaMapping->pPhysMemDesc, MEMDESC_FLAGS_ALLOC_FROM_SCANOUT_CARVEOUT) ||
+    if (memdescIsCarveoutMemory(pIovaMapping->pPhysMemDesc) ||
         memdescGetFlag(pIovaMapping->pPhysMemDesc, MEMDESC_FLAGS_GUEST_ALLOCATED))
     {
         return NV_OK;
@@ -3202,7 +3202,7 @@ osIovaUnmap
     // For guest-allocated or carveout memory, we never actually remapped the
     // memory, so we shouldn't try to unmap it here.
     //
-    if (memdescGetFlag(pIovaMapping->pPhysMemDesc, MEMDESC_FLAGS_ALLOC_FROM_SCANOUT_CARVEOUT) ||
+    if (memdescIsCarveoutMemory(pIovaMapping->pPhysMemDesc) ||
         memdescGetFlag(pIovaMapping->pPhysMemDesc, MEMDESC_FLAGS_GUEST_ALLOCATED))
     {
         return;

@@ -636,6 +636,11 @@ osInitNvMapping(
     {
         nv->flags |= NV_FLAG_TRIGGER_FLR;
     }
+
+    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_IS_SOC_SDM))
+    {
+        nv->flags |= NV_FLAG_HAS_CONSOLE_IN_SYSMEM_CARVEOUT;
+    }
 }
 
 static NV_STATUS

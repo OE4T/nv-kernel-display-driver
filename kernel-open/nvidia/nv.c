@@ -6103,6 +6103,21 @@ void NV_API_CALL nv_get_screen_info(
     *pPhysicalAddress = 0;
     *pFbWidth = *pFbHeight = *pFbDepth = *pFbPitch = *pFbSize = 0;
 
+#if defined(CONFIG_OF)
+    //
+    // Try to get the framebuffer information from device tree simple-framebuffer node.
+    // This is particularly useful for Tegra platforms where the bootloader
+    // sets up a simple framebuffer via device tree.
+    //
+    if (pci_dev == NULL)
+    {
+        if (nv_platform_get_screen_info_dt(pPhysicalAddress, pFbWidth, pFbHeight, pFbDepth, pFbPitch, pFbSize) == NV_OK)
+        {
+            return;
+        }
+    }
+#endif // CONFIG_OF
+
 #if defined(CONFIG_FB) && defined(NV_NUM_REGISTERED_FB_PRESENT)
     if (num_registered_fb > 0)
     {
@@ -6111,8 +6126,13 @@ void NV_API_CALL nv_get_screen_info(
             if (!registered_fb[i])
                 continue;
 
-            /* Make sure base address is mapped to GPU BAR */
-            if (NV_IS_CONSOLE_MAPPED(nv, registered_fb[i]->fix.smem_start))
+            /*
+             * Ensure that either this is a zero-FB SOC GPU with a console in
+             * the system carveout, or it’s a dGPU device with  console mapped
+             * onto its BAR.
+             */
+            if (NV_HAS_CONSOLE_IN_SYSMEM_CARVEOUT(nv) ||
+                NV_IS_CONSOLE_MAPPED(nv, registered_fb[i]->fix.smem_start))
             {
                 *pPhysicalAddress = registered_fb[i]->fix.smem_start;
                 *pFbWidth = registered_fb[i]->var.xres;
@@ -6160,9 +6180,13 @@ void NV_API_CALL nv_get_screen_info(
             physAddr |= (NvU64)screen_info.ext_lfb_base << 32;
         }
 #endif
-
-        /* Make sure base address is mapped to GPU BAR */
-        if (NV_IS_CONSOLE_MAPPED(nv, physAddr))
+        /*
+         * Ensure that either this is a zero-FB SOC GPU with a console in the
+         * system carveout, or it’s a dGPU device with  console mapped onto its
+         * BAR.
+         */
+        if (NV_HAS_CONSOLE_IN_SYSMEM_CARVEOUT(nv) ||
+            NV_IS_CONSOLE_MAPPED(nv, physAddr))
         {
             *pPhysicalAddress = physAddr;
             *pFbWidth = screen_info.lfb_width;
@@ -6179,7 +6203,7 @@ void NV_API_CALL nv_get_screen_info(
      * If screen info can't be fetched with previous methods, then try
      * to get the base address and size from the memory resource tree.
      */
-    if (pci_dev != NULL)
+    if ((pci_dev != NULL) && !NV_HAS_CONSOLE_IN_SYSMEM_CARVEOUT(nv))
     {
         BUILD_BUG_ON(NV_GPU_BAR_INDEX_IMEM != NV_GPU_BAR_INDEX_FB + 1);
         for (i = NV_GPU_BAR_INDEX_FB; i <= NV_GPU_BAR_INDEX_IMEM; i++)

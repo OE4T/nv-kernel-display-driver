@@ -332,7 +332,12 @@ void __nvoc_init_dataField_OBJGPU(OBJGPU *pThis) {
         pThis->setProperty(pThis, PDB_PROP_GPU_RUSD_DISABLE_CLK_PUBLIC_DOMAIN_INFO, NV_FALSE);
     }
     pThis->setProperty(pThis, PDB_PROP_GPU_RECOVERY_REBOOT_REQUIRED, NV_FALSE);
-    pThis->setProperty(pThis, PDB_PROP_GPU_ALLOC_ISO_SYS_MEM_FROM_CARVEOUT, NV_FALSE);
+
+    // NVOC Property Hal field -- PDB_PROP_GPU_ALLOC_ISO_SYS_MEM_FROM_CARVEOUT
+    // default
+    {
+        pThis->setProperty(pThis, PDB_PROP_GPU_ALLOC_ISO_SYS_MEM_FROM_CARVEOUT, NV_FALSE);
+    }
 
     pThis->deviceInstance = 32;
 

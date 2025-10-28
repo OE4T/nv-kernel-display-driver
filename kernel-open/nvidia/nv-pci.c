@@ -2162,8 +2162,7 @@ failed:
     return -1;
 }
 
-static void
-nv_pci_remove(struct pci_dev *pci_dev)
+static void nv_pci_remove_helper(struct pci_dev *pci_dev, bool block_if_gpu_in_use)
 {
     nv_linux_state_t *nvl = NULL;
     nv_state_t *nv;
@@ -2171,9 +2170,6 @@ nv_pci_remove(struct pci_dev *pci_dev)
     NvU8 regs_bar_index = nv_bar_index_to_os_bar_index(pci_dev,
                                                        NV_GPU_BAR_INDEX_REGS);
 
-    nv_printf(NV_DBG_SETUP, "NVRM: removing GPU %04x:%02x:%02x.%x\n",
-              NV_PCI_DOMAIN_NUMBER(pci_dev), NV_PCI_BUS_NUMBER(pci_dev),
-              NV_PCI_SLOT_NUMBER(pci_dev), PCI_FUNC(pci_dev->devfn));
 
 #ifdef NV_PCI_SRIOV_SUPPORT
     if (pci_dev->is_virtfn)
@@ -2186,15 +2182,9 @@ nv_pci_remove(struct pci_dev *pci_dev)
     }
 #endif /* NV_PCI_SRIOV_SUPPORT */
 
-    if (nv_kmem_cache_alloc_stack(&sp) != 0)
-    {
-        return;
-    }
-
     nvl = pci_get_drvdata(pci_dev);
     if (!nvl || (nvl->pci_dev != pci_dev))
     {
-        nv_kmem_cache_free_stack(sp);
         return;
     }
 
@@ -2229,6 +2219,21 @@ nv_pci_remove(struct pci_dev *pci_dev)
 
     LOCK_NV_LINUX_DEVICES();
     down(&nvl->ldata_lock);
+
+    if (!block_if_gpu_in_use && (NV_ATOMIC_READ(nvl->usage_count) != 0))
+    {
+        up(&nvl->ldata_lock);
+        UNLOCK_NV_LINUX_DEVICES();
+        return;
+    }
+
+    if (nv_kmem_cache_alloc_stack(&sp) != 0)
+    {
+        up(&nvl->ldata_lock);
+        UNLOCK_NV_LINUX_DEVICES();
+        return;
+    }
+
     nv->flags |= NV_FLAG_PCI_REMOVE_IN_PROGRESS;
 
     rm_notify_gpu_removal(sp, nv);
@@ -2251,7 +2256,6 @@ nv_pci_remove(struct pci_dev *pci_dev)
          */
         while (NV_ATOMIC_READ(nvl->usage_count) != 0)
         {
-
             /*
              * While waiting, release the locks so that other threads can make
              * forward progress.
@@ -2270,7 +2274,7 @@ nv_pci_remove(struct pci_dev *pci_dev)
                 nv_printf(NV_DBG_ERRORS,
                           "NVRM: Failed removal of device %04x:%02x:%02x.%x!\n",
                           NV_PCI_DOMAIN_NUMBER(pci_dev), NV_PCI_BUS_NUMBER(pci_dev),
-                          NV_PCI_SLOT_NUMBER(pci_dev), PCI_FUNC(pci_dev->devfn));  
+                          NV_PCI_SLOT_NUMBER(pci_dev), PCI_FUNC(pci_dev->devfn));
                 WARN_ON(1);
                 goto done;
             }
@@ -2362,28 +2366,42 @@ done:
 }
 
 static void
+nv_pci_remove(struct pci_dev *pci_dev)
+{
+
+    nv_printf(NV_DBG_SETUP, "NVRM: removing GPU %04x:%02x:%02x.%x\n",
+              NV_PCI_DOMAIN_NUMBER(pci_dev), NV_PCI_BUS_NUMBER(pci_dev),
+              NV_PCI_SLOT_NUMBER(pci_dev), PCI_FUNC(pci_dev->devfn));
+
+    nv_pci_remove_helper(pci_dev, true);
+}
+
+static void
 nv_pci_shutdown(struct pci_dev *pci_dev)
 {
     nv_linux_state_t *nvl = pci_get_drvdata(pci_dev);
-
-    if (nvl != NULL)
+    
+    if (!nvl || (nvl->pci_dev != pci_dev))
     {
-        nv_state_t *nv = NV_STATE_PTR(nvl);
+        return;
+    }
 
-        if (nvl->is_forced_shutdown)
-        {
-            nvl->is_forced_shutdown = NV_FALSE;
-            return;
-        }
-
-        nvidia_modeset_remove(nv->gpu_id);
-
-        nvl->nv_state.is_shutdown = NV_TRUE;
+    if (nvl->is_forced_shutdown)
+    {
+        nvl->is_forced_shutdown = NV_FALSE;
+        return;
     }
 
 #if defined(CONFIG_PM_DEVFREQ)
     nv_pci_tegra_unregister_devfreq(pci_dev);
 #endif
+
+    nv_pci_remove_helper(pci_dev, false);
+
+    if (pci_get_drvdata(pci_dev) != NULL)
+    {
+        nvl->nv_state.is_shutdown = NV_TRUE;
+    }
 
     /* pci_clear_master is not defined for !CONFIG_PCI */
 #ifdef CONFIG_PCI

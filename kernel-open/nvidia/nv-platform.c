@@ -25,6 +25,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/of_device.h>
+#include <linux/of_address.h>
 
 #include "nv-platform.h"
 #include "nv-linux.h"
@@ -1711,3 +1712,175 @@ NvBool nv_get_hdcp_enabled(nv_state_t *nv)
 
     return NV_FALSE;
 }
+
+#if defined(CONFIG_OF)
+
+// Global framebuffer cache structure
+typedef struct {
+    NvBool dt_parsed;
+    NvBool dt_success;
+    NvU64 physical_address;
+    NvU32 fb_width;
+    NvU32 fb_height;
+    NvU32 fb_depth;
+    NvU32 fb_pitch;
+    NvU64 fb_size;
+} screen_info_cache_t;
+
+// Global framebuffer cache instance
+static screen_info_cache_t g_screen_info_cache = {
+    .dt_parsed = NV_FALSE,
+    .dt_success = NV_FALSE,
+    .physical_address = 0,
+    .fb_width = 0,
+    .fb_height = 0,
+    .fb_depth = 0,
+    .fb_pitch = 0,
+    .fb_size = 0
+};
+
+NV_STATUS nv_platform_get_screen_info_dt(
+    NvU64 *pPhysicalAddress,
+    NvU32       *pFbWidth,
+    NvU32       *pFbHeight,
+    NvU32       *pFbDepth,
+    NvU32       *pFbPitch,
+    NvU64       *pFbSize
+)
+{
+    //
+    // Try to get the framebuffer information from device tree simple-framebuffer node.
+    // This is particularly useful for Tegra platforms where the bootloader
+    // sets up a simple framebuffer via device tree.
+    //
+
+    struct device_node *fb_node;
+    struct device_node *mem_node;
+    struct resource res;
+    u32 width, height, stride;
+    const char *format;
+    int ret;
+
+    if (g_screen_info_cache.dt_parsed)
+    {
+        if (g_screen_info_cache.dt_success)
+        {
+            *pPhysicalAddress = g_screen_info_cache.physical_address;
+            *pFbWidth = g_screen_info_cache.fb_width;
+            *pFbHeight = g_screen_info_cache.fb_height;
+            *pFbDepth = g_screen_info_cache.fb_depth;
+            *pFbPitch = g_screen_info_cache.fb_pitch;
+            *pFbSize = g_screen_info_cache.fb_size;
+            return NV_OK;
+        }
+        else
+        {
+            return NV_ERR_NOT_SUPPORTED;
+        }
+    }
+
+    g_screen_info_cache.dt_parsed = NV_TRUE;
+
+    // Look for simple-framebuffer node in chosen
+    fb_node = of_find_node_by_path("/chosen/framebuffer");
+    if (fb_node == NULL)
+    {
+        // Alternative path for some platforms
+        for_each_compatible_node(fb_node, NULL, "simple-framebuffer")
+        {
+            nv_printf(NV_DBG_INFO, "NVRM: Found simple-framebuffer compatible node: %s\n",
+                        fb_node->full_name ? fb_node->full_name : "unknown");
+            if (of_property_read_bool(fb_node, "status") &&
+                !strcmp(of_get_property(fb_node, "status", NULL), "disabled"))
+            {
+                nv_printf(NV_DBG_INFO, "NVRM: Skipping disabled framebuffer node\n");
+                of_node_put(fb_node);
+                continue;
+            }
+            break;
+        }
+    }
+    else
+    {
+        nv_printf(NV_DBG_INFO, "NVRM: Found framebuffer node in /chosen/framebuffer\n");
+    }
+
+    if (fb_node != NULL)
+    {
+        nv_printf(NV_DBG_INFO, "NVRM: Processing framebuffer node: %s\n",
+                    fb_node->full_name ? fb_node->full_name : "unknown");
+        // Get memory region
+        mem_node = of_parse_phandle(fb_node, "memory-region", 0);
+        if (mem_node != NULL)
+        {
+            nv_printf(NV_DBG_INFO, "NVRM: Found memory-region: %s\n",
+                        mem_node->full_name ? mem_node->full_name : "unknown");
+            ret = of_address_to_resource(mem_node, 0, &res);
+            of_node_put(mem_node);
+            if (ret == 0)
+            {
+                nv_printf(NV_DBG_INFO, "NVRM: Memory region: start=0x%llx, size=0x%llx\n",
+                            (NvU64)res.start, (NvU64)resource_size(&res));
+                // Get display parameters
+                if (!of_property_read_u32(fb_node, "width", &width) &&
+                    !of_property_read_u32(fb_node, "height", &height) &&
+                    !of_property_read_u32(fb_node, "stride", &stride) &&
+                    !of_property_read_string(fb_node, "format", &format))
+                {
+                    // Calculate depth from format
+                    u32 depth = 32; // default
+                    if (!strcmp(format, "r5g6b5") || !strcmp(format, "r5g5b5a1") ||
+                        !strcmp(format, "x1r5g5b5") || !strcmp(format, "a1r5g5b5"))
+                    {
+                        depth = 16;
+                    }
+                    else if (!strcmp(format, "r8g8b8"))
+                    {
+                        depth = 24;
+                    }
+                    nv_printf(NV_DBG_INFO, "NVRM: Found simple-framebuffer in DT: %dx%d@%d, addr=0x%llx, size=0x%llx, stride=%d, format=%s\n",
+                                width, height, depth, (NvU64)res.start, (NvU64)resource_size(&res), stride, format);
+
+                    g_screen_info_cache.dt_success = NV_TRUE;
+
+                    g_screen_info_cache.physical_address = res.start;
+                    g_screen_info_cache.fb_width = width;
+                    g_screen_info_cache.fb_height = height;
+                    g_screen_info_cache.fb_depth = depth;
+                    g_screen_info_cache.fb_pitch = stride;
+                    g_screen_info_cache.fb_size = resource_size(&res);
+
+                    *pPhysicalAddress = g_screen_info_cache.physical_address;
+                    *pFbWidth = g_screen_info_cache.fb_width;
+                    *pFbHeight = g_screen_info_cache.fb_height;
+                    *pFbDepth = g_screen_info_cache.fb_depth;
+                    *pFbPitch = g_screen_info_cache.fb_pitch;
+                    *pFbSize = g_screen_info_cache.fb_size;
+
+                    of_node_put(fb_node);
+                    return NV_OK;
+                }
+                else
+                {
+                    nv_printf(NV_DBG_ERRORS, "NVRM: Failed to read display parameters from DT\n");
+                }
+            }
+            else
+            {
+                nv_printf(NV_DBG_ERRORS, "NVRM: Failed to convert memory region to resource: %d\n", ret);
+            }
+        }
+        else
+        {
+            nv_printf(NV_DBG_ERRORS, "NVRM: No memory-region property found\n");
+        }
+        of_node_put(fb_node);
+    }
+    else
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: No simple-framebuffer node found - fb_node is NULL\n");
+    }
+
+    return NV_ERR_NOT_SUPPORTED;
+}
+#endif // CONFIG_OF

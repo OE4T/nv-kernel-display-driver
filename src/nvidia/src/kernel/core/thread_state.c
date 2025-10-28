@@ -505,27 +505,21 @@ static void _threadStateLogInitCaller(THREAD_STATE_NODE *pThreadNode, NvU64 func
 }
 
 /**
- * @brief Initialize a threadState for regular threads (non-interrupt context)
+ * @brief Common initialization logic for both stack and heap thread state nodes
  *
- * @param[in/out] pThreadNode
- * @param[in] flags
+ * @param[in/out] pThreadNode The node to initialize
+ * @param[in] flags Thread state flags
+ * @param[in] bUsingHeap NV_TRUE if heap-allocated, NV_FALSE if stack-allocated
  *
+ * @return NV_OK on success, error code on failure
  */
-void threadStateInit(THREAD_STATE_NODE *pThreadNode, NvU32 flags)
+static NV_STATUS _threadStateInitCommon(THREAD_STATE_NODE *pThreadNode, NvU32 flags, NvBool bUsingHeap)
 {
     NV_STATUS rmStatus;
     NvU64 funcAddr;
 
-    // Isrs should be using threadStateIsrInit().
-    NV_ASSERT((flags & (THREAD_STATE_FLAGS_IS_ISR_LOCKLESS |
-                        THREAD_STATE_FLAGS_IS_ISR |
-                        THREAD_STATE_FLAGS_DEFERRED_INT_HANDLER_RUNNING)) == 0);
-
-    // Check to see if ThreadState is enabled
-    if (!(threadStateDatabase.setupFlags & THREAD_STATE_SETUP_FLAGS_ENABLED))
-        return;
-
     portMemSet(pThreadNode, 0, sizeof(*pThreadNode));
+    pThreadNode->bUsingHeap = bUsingHeap;
     pThreadNode->threadSeqId = portAtomicIncrementU32(&threadStateDatabase.threadSeqCntr);
     pThreadNode->cpuNum = osGetCurrentProcessorNumber();
     pThreadNode->flags = flags;
@@ -543,9 +537,10 @@ void threadStateInit(THREAD_STATE_NODE *pThreadNode, NvU32 flags)
 
     rmStatus = osGetCurrentThread(&pThreadNode->threadId);
     if (rmStatus != NV_OK)
-        return;
+        return rmStatus;
 
-    NV_ASSERT_OR_RETURN_VOID(pThreadNode->cpuNum < threadStateDatabase.maxCPUs);
+    NV_ASSERT_OR_RETURN(pThreadNode->cpuNum < threadStateDatabase.maxCPUs,
+                        NV_ERR_INVALID_STATE);
 
     funcAddr = (NvU64) (NV_RETURN_ADDRESS());
 
@@ -555,27 +550,23 @@ void threadStateInit(THREAD_STATE_NODE *pThreadNode, NvU32 flags)
         // Reset the threadId as insertion failed. bValid is already NV_FALSE
         pThreadNode->threadId = 0;
         portSyncSpinlockRelease(threadStateDatabase.spinlock);
-        return;
-    }
-    else
-    {
-        pThreadNode->bValid = NV_TRUE;
-        rmStatus = NV_OK;
+        return NV_ERR_GENERIC;
     }
 
+    pThreadNode->bValid = NV_TRUE;
     _threadStateLogInitCaller(pThreadNode, funcAddr);
 
     portSyncSpinlockRelease(threadStateDatabase.spinlock);
 
     _threadStatePrintInfo(pThreadNode);
 
-    NV_ASSERT(rmStatus == NV_OK);
     threadPriorityStateAlloc();
 
     if (TLS_MIRROR_THREADSTATE)
     {
         THREAD_STATE_NODE **pTls = (THREAD_STATE_NODE **)tlsEntryAcquire(TLS_ENTRY_ID_THREADSTATE);
-        NV_ASSERT_OR_RETURN_VOID(pTls != NULL);
+        NV_ASSERT_OR_RETURN(pTls != NULL, NV_ERR_INVALID_STATE);
+
         if (*pTls != NULL)
         {
             NV_PRINTF(LEVEL_WARNING,
@@ -584,6 +575,66 @@ void threadStateInit(THREAD_STATE_NODE *pThreadNode, NvU32 flags)
         }
         *pTls = pThreadNode;
     }
+    return NV_OK;
+}
+
+/**
+ * @brief Initialize a threadState for regular threads (non-interrupt context)
+ *  Use the new UAF-safe API for new code, threadStateAlloc().
+ * @param[in/out] pThreadNode
+ * @param[in] flags
+ *
+ */
+void threadStateInit(THREAD_STATE_NODE *pThreadNode, NvU32 flags)
+{
+    // Isrs should be using threadStateIsrInit().
+    NV_ASSERT_OR_RETURN_VOID((flags & (THREAD_STATE_FLAGS_IS_ISR_LOCKLESS |
+        THREAD_STATE_FLAGS_IS_ISR |
+        THREAD_STATE_FLAGS_DEFERRED_INT_HANDLER_RUNNING)) == 0);
+
+    // Check to see if ThreadState is enabled
+    if (!(threadStateDatabase.setupFlags & THREAD_STATE_SETUP_FLAGS_ENABLED))
+        return;
+
+    // Use common initialization logic (stack-allocated)
+    // Note: Legacy void API ignores errors for backward compatibility
+    _threadStateInitCommon(pThreadNode, flags, NV_FALSE);
+}
+
+/**
+ * @brief Allocate a heap-based threadState
+ * @param[in] flags Thread state flags
+ *
+ * @return Heap-allocated THREAD_STATE_NODE* on success, NULL on failure
+ */
+THREAD_STATE_NODE* threadStateAlloc(NvU32 flags)
+{
+    THREAD_STATE_NODE *pHeapNode;
+    NV_STATUS rmStatus;
+
+    // Isrs should be using threadStateIsrInit().
+    NV_ASSERT_OR_RETURN((flags & (THREAD_STATE_FLAGS_IS_ISR_LOCKLESS |
+        THREAD_STATE_FLAGS_IS_ISR |
+        THREAD_STATE_FLAGS_DEFERRED_INT_HANDLER_RUNNING)) == 0, NULL);
+
+    // Check to see if ThreadState is enabled
+    if (!(threadStateDatabase.setupFlags & THREAD_STATE_SETUP_FLAGS_ENABLED))
+        return NULL;
+
+    // Allocate heap node directly
+    pHeapNode = portMemAllocNonPaged(sizeof(THREAD_STATE_NODE));
+    if (pHeapNode == NULL)
+        return NULL;
+
+    rmStatus = _threadStateInitCommon(pHeapNode, flags, NV_TRUE);
+    if (rmStatus != NV_OK)
+        goto cleanup_heap;
+
+    return pHeapNode;
+
+cleanup_heap:
+    portMemFree(pHeapNode);
+    return NULL;
 }
 
 /**
@@ -873,6 +924,12 @@ void threadStateFree(THREAD_STATE_NODE *pThreadNode, NvU32 flags)
                      "TLS: tlsEntryRelease returned %d (this is likely due to nested threadStateInit() calls)\n",
                      r);
         }
+    }
+
+    // Free heap memory if this node was heap-allocated
+    if (pThreadNode->bUsingHeap)
+    {
+        portMemFree(pThreadNode);
     }
 }
 

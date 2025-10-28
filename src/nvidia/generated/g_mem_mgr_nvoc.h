@@ -2324,6 +2324,8 @@ static inline NV_STATUS memmgrCalculateHeapOffsetWithGSP(OBJGPU *pGpu, struct Me
 
 #define memmgrCalculateHeapOffsetWithGSP_HAL(pGpu, pMemoryManager, offset) memmgrCalculateHeapOffsetWithGSP(pGpu, pMemoryManager, offset)
 
+NV_STATUS memmgrGetCarveoutRegionInfo_KERNEL(POBJGPU pGpu, struct MemoryManager *pMemoryManager, NV2080_CTRL_FB_GET_CARVEOUT_REGION_INFO_PARAMS *pParams);
+
 static inline NV_STATUS memmgrGetCarveoutRegionInfo_56cd7a(POBJGPU pGpu, struct MemoryManager *pMemoryManager, NV2080_CTRL_FB_GET_CARVEOUT_REGION_INFO_PARAMS *pParams) {
     return NV_OK;
 }
@@ -2335,7 +2337,7 @@ static inline NV_STATUS memmgrGetCarveoutRegionInfo(POBJGPU pGpu, struct MemoryM
     return NV_ERR_NOT_SUPPORTED;
 }
 #else //__nvoc_mem_mgr_h_disabled
-#define memmgrGetCarveoutRegionInfo(pGpu, pMemoryManager, pParams) memmgrGetCarveoutRegionInfo_56cd7a(pGpu, pMemoryManager, pParams)
+#define memmgrGetCarveoutRegionInfo(pGpu, pMemoryManager, pParams) memmgrGetCarveoutRegionInfo_KERNEL(pGpu, pMemoryManager, pParams)
 #endif //__nvoc_mem_mgr_h_disabled
 
 #define memmgrGetCarveoutRegionInfo_HAL(pGpu, pMemoryManager, pParams) memmgrGetCarveoutRegionInfo(pGpu, pMemoryManager, pParams)
