@@ -108,7 +108,7 @@ c762aa186dc72ed0b9183492f9bd187c301d33d3 - kernel-open/nvidia/nv-kthread-q.c
 70bece14e12b9ffc92816ee8159a4ce596579d78 - kernel-open/nvidia/os-pci.c
 a677049bb56fa5ebe22fe43b0c4a12acd58a6677 - kernel-open/nvidia/nv-p2p.c
 e4d12f027cb5f74124da71bbbc23bcb33651834a - kernel-open/nvidia/nv-pci-table.c
-1bc3343eecfa3194929d2e1d5620a652f109434d - kernel-open/nvidia/nv-pci.c
+1034de1ab2403c30bb22d6a65bd2134a540590f4 - kernel-open/nvidia/nv-pci.c
 6dfc57ac42bed97c6ff81d82e493f05b369e0b84 - kernel-open/nvidia/nvspdm_cryptlib_extensions.h
 bba706cfbc04b3a880b5e661066f92e765fad663 - kernel-open/nvidia/nv-caps-imex.c
 ed3c83f62e4ccc4b53d886eedd4b47518a361393 - kernel-open/nvidia/nv-dmabuf.c
@@ -871,7 +871,7 @@ a17aae37486b325442e447489b64add3694ab8b0 - src/nvidia/arch/nvalloc/unix/src/osun
 b5b409625fde1b640e4e93276e35248f0fccfa4c - src/nvidia/arch/nvalloc/unix/src/gcc_helper.c
 07f9c0995f1fbbba9eb819321996b57c1d2b86cd - src/nvidia/arch/nvalloc/unix/src/exports-stubs.c
 00e1da5b996760d70515c7d400462ebbc9dc4cba - src/nvidia/arch/nvalloc/unix/src/osinit.c
-dc5a592d8de2a6c173c6dd3cf6d079ced05a1ecd - src/nvidia/arch/nvalloc/unix/src/osapi.c
+be6bfb5b135e7f728ecff7aaac52e6cfa4f4f5ce - src/nvidia/arch/nvalloc/unix/src/osapi.c
 a7383deea9dcab093323d8dde1ede73f85f93343 - src/nvidia/arch/nvalloc/unix/src/rmobjexportimport.c
 b1a6d0a1ca4307b8e8d9cf136c94ef7c9efbae4c - src/nvidia/arch/nvalloc/unix/src/registry.c
 915ee6dbffff92a86d68ac38549b25aa1e146872 - src/nvidia/arch/nvalloc/unix/src/os-hypervisor-stubs.c
@@ -1474,7 +1474,7 @@ be49ea18102a44914e0d7686c51430df18336383 - src/nvidia-modeset/src/nvkms-frameloc
 f754a27436fd1e1fa103de6110224c21ad7ea9f4 - src/nvidia-modeset/src/nvkms-pow.c
 e8c6d2eedfba19f8f06dd57f629588615cf1a2e9 - src/nvidia-modeset/src/nvkms-evo1.c
 d15f314bea66574e0ffc72966b86bae8366412f5 - src/nvidia-modeset/src/nvkms-console-restore.c
-0699860902369359e5ff1a0ef46b87e955d4bb7a - src/nvidia-modeset/src/nvkms-modepool.c
+f6e217845650e0e33591016a17df3b26ea6cdc7b - src/nvidia-modeset/src/nvkms-modepool.c
 403e6dbff0a607c2aecf3204c56633bd7b612ae2 - src/nvidia-modeset/src/nvkms-stereo.c
 fd6ecacc4f273c88960148c070dd17d93f49909b - src/nvidia-modeset/src/nvkms-lut.c
 771fee54d1123871e380db6f3227b4946b6be647 - src/nvidia-modeset/src/dp/nvdp-timer.cpp

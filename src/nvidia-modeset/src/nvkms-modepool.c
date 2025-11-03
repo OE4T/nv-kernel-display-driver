@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2005-2015 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2005-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -1989,7 +1989,9 @@ static NvBool ConstructModeTimingsMetaData(
          * pTimingsEvo after ValidateMode has written to it.
          */
         if (nvDpyIsHdmiEvo(pDpyEvo)) {
-            NvTiming_ConstructVideoInfoframeCtrl(&timing, pVideoInfoFrameCtrl);
+            if (pVideoInfoFrameCtrl != NULL) {
+                NvTiming_ConstructVideoInfoframeCtrl(&timing, pVideoInfoFrameCtrl);
+            }
 
             if (pVendorInfoFrameCtrl != NULL) {
                 // Currently hardcoded to send infoframe necessary for HDMI 1.4a 4kx2k extended modes.

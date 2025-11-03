@@ -659,17 +659,15 @@ nv_pci_gb10b_devfreq_target(struct device *dev, unsigned long *freq, u32 flags)
 #endif
 
     //
-    // When GPU is suspended(railgated), the PM runtime suspend callback should
-    // suspend all devfreq devices, and devfreq cycle should not be triggered.
+    // GPU can be under suspending/suspended/resuming state defined the runtime
+    // PM (RPM) framework. When device is under either of these states, DVFS based
+    // on GPU load information should be disabled.
     //
-    // However, users are still able to change the devfreq governor from the
-    // sysfs interface and indirectly invoke the update_devfreq function, which
-    // will further call the target callback function.
+    // Complete load-based DVFS cycle involve GPU load query through rmapi and
+    // clock scaling through BPMP MRQ_CLK mailbox request, which will awake the
+    // GPU and contradict the suspended state.
     //
-    // Early stop the process here before clk_set_rate/clk_get_rate, since these
-    // calls served by BPMP will awake the GPU.
-    //
-    if (pm_runtime_suspended(&pdev->dev))
+    if (!pm_runtime_active(&pdev->dev))
     {
         *freq = tdev->devfreq->scaling_min_freq;
         return 0;
@@ -746,7 +744,15 @@ nv_pci_tegra_devfreq_get_cur_freq(struct device *dev, unsigned long *freq)
 {
     struct nv_pci_tegra_devfreq_dev *tdev = to_tegra_devfreq_dev(dev);
 
-    if (!pm_runtime_suspended(dev->parent))
+    //
+    // When GPU is suspended(railgated), the PM runtime suspend callback should
+    // suspend all devfreq devices, and devfreq cycle should not be triggered.
+    //
+    // However, users are still able to change the devfreq governor from the
+    // sysfs interface and indirectly invoke the update_devfreq function, which
+    // will further call the get_dev_status callback function.
+    //
+    if (pm_runtime_active(dev->parent))
         *freq = clk_get_rate(tdev->clk);
     else
         *freq = tdev->devfreq->scaling_min_freq;
@@ -768,14 +774,15 @@ nv_pci_tegra_devfreq_get_dev_status(struct device *dev,
     NV_STATUS status;
 
     //
-    // When GPU is suspended(railgated), the PM runtime suspend callback should
-    // suspend all devfreq devices, and devfreq cycle should not be triggered.
+    // GPU can be under suspending/suspended/resuming state defined the runtime
+    // PM (RPM) framework. When device is under either of these states, DVFS based
+    // on GPU load information should be disabled.
     //
-    // However, users are still able to change the devfreq governor from the
-    // sysfs interface and indirectly invoke the update_devfreq function, which
-    // will further call the get_dev_status callback function.
+    // Complete load-based DVFS cycle involve GPU load query through rmapi and
+    // clock scaling through BPMP MRQ_CLK mailbox request, which will awake the
+    // GPU and contradict the suspended state.
     //
-    if (pm_runtime_suspended(&pdev->dev))
+    if (!pm_runtime_active(&pdev->dev))
     {
         stat->total_time = 100;
         stat->busy_time = 0;
