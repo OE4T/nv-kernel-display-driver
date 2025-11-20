@@ -993,7 +993,7 @@ f87916eae53dbea2f6bdbe80a0e53ecc2071d9fd - src/nvidia/generated/g_lock_test_nvoc
 d71ff42bc0fc0faf1999a6cbe88c4492a47e200e - src/nvidia/generated/g_os_nvoc.h
 e58abb783f7561d0af925c2fca392c5165fcb199 - src/nvidia/generated/g_kern_disp_nvoc.c
 d6a34926ab710156c9c4b2d9f12a44e6dafd43d1 - src/nvidia/generated/g_tmr_nvoc.h
-c4c67b0e0284656b32c7b4547e22d521c442124a - src/nvidia/generated/g_disp_objs_nvoc.h
+6f26833fa99a15127f832c8cb47186dd79efc099 - src/nvidia/generated/g_disp_objs_nvoc.h
 8e49b4d77641c98c6101dbc88a79290ceca6271a - src/nvidia/generated/g_rs_server_nvoc.h
 af206c390549eff5d690ad07f3e58cd417f07f5f - src/nvidia/generated/g_hal_register.h
 be659882e731b6a2019639265af46239c5c96ebf - src/nvidia/generated/g_hal_nvoc.c
