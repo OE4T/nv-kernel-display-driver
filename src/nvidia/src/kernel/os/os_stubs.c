@@ -411,6 +411,21 @@ osTegraSocPowerManagement
     return NV_OK;
 }
 
+#if !(RMCFG_FEATURE_PLATFORM_UNIX || RMCFG_FEATURE_PLATFORM_DCE) || \
+    (RMCFG_FEATURE_PLATFORM_UNIX && !RMCFG_FEATURE_TEGRA_SOC_NVDISPLAY)
+NV_STATUS
+osTegraSocGetDispClockRates
+(
+    OS_GPU_INFO *pOsGpuInfo,
+    NvU32       *pMaxDispClkRateDisppll,
+    NvU32       *pMaxDispClkRateSppllClkouta,
+    NvU32       *pMaxHubClkRateSppllClkoutb
+)
+{
+    return NV_ERR_NOT_SUPPORTED;
+}
+#endif
+
 NV_STATUS osLockPageableDataSection(RM_PAGEABLE_SECTION *pSection)
 {
     return NV_OK;

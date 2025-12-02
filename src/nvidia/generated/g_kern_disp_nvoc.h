@@ -567,6 +567,20 @@ static inline NV_STATUS kdispArbAndAllocDisplayBandwidth(struct OBJGPU *pGpu, st
 
 #define kdispArbAndAllocDisplayBandwidth_HAL(pGpu, pKernelDisplay, iccBwClient, minRequiredIsoBandwidthKBPS, minRequiredFloorBandwidthKBPS) kdispArbAndAllocDisplayBandwidth(pGpu, pKernelDisplay, iccBwClient, minRequiredIsoBandwidthKBPS, minRequiredFloorBandwidthKBPS)
 
+NV_STATUS kdispGetUefiDisplayBandwidth_v04_02(struct OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, NvU32 *uefiIsoBandwidthKBPS, NvU32 *uefiFloorBandwidthKBPS);
+
+
+#ifdef __nvoc_kern_disp_h_disabled
+static inline NV_STATUS kdispGetUefiDisplayBandwidth(struct OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, NvU32 *uefiIsoBandwidthKBPS, NvU32 *uefiFloorBandwidthKBPS) {
+    NV_ASSERT_FAILED_PRECOMP("KernelDisplay was disabled!");
+    return NV_ERR_NOT_SUPPORTED;
+}
+#else //__nvoc_kern_disp_h_disabled
+#define kdispGetUefiDisplayBandwidth(pGpu, pKernelDisplay, uefiIsoBandwidthKBPS, uefiFloorBandwidthKBPS) kdispGetUefiDisplayBandwidth_v04_02(pGpu, pKernelDisplay, uefiIsoBandwidthKBPS, uefiFloorBandwidthKBPS)
+#endif //__nvoc_kern_disp_h_disabled
+
+#define kdispGetUefiDisplayBandwidth_HAL(pGpu, pKernelDisplay, uefiIsoBandwidthKBPS, uefiFloorBandwidthKBPS) kdispGetUefiDisplayBandwidth(pGpu, pKernelDisplay, uefiIsoBandwidthKBPS, uefiFloorBandwidthKBPS)
+
 NV_STATUS kdispSetPushBufferParamsToPhysical_IMPL(struct OBJGPU *pGpu, struct KernelDisplay *pKernelDisplay, struct DispChannel *pDispChannel, NvHandle hObjectBuffer, struct ContextDma *pBufferContextDma, NvU32 hClass, NvU32 channelInstance, DISPCHNCLASS internalDispChnClass, ChannelPBSize channelPBSize, NvU32 subDeviceId);
 
 

@@ -7826,7 +7826,6 @@ NvBool nvAllocateDisplayBandwidth(
     if (!pDevEvo->isSOCDisplay) {
         return TRUE;
     }
-
     params.subDeviceInstance = 0;
     params.averageBandwidthKBPS = newIsoBandwidthKBPS;
     params.floorBandwidthKBPS = newDramFloorKBPS;
@@ -7929,6 +7928,62 @@ static void AssignNVEvoIsModePossibleDispInput(
 }
 
 /*!
+ * Query UEFI passed ISO BW and DRAM Floor
+ */
+static NvBool QueryUefiIMPParams(NVDispEvoPtr pDispEvo,
+                                 const NvU32 modesetRequestedHeadsMask)
+{
+    NVDevEvoPtr pDevEvo = pDispEvo->pDevEvo;
+    NVDispHeadStateEvoPtr pHeadState;
+    NV0073_CTRL_SYSTEM_QUERY_UEFI_DISPLAY_BANDWIDTH_PARAMS params = {};
+    NvU32 ret;
+    NvBool uefiHandoff = FALSE;
+
+    if (!pDevEvo->isSOCDisplay) {
+        return TRUE;
+    }
+
+    if (!pDevEvo->coreInitMethodsPending || (modesetRequestedHeadsMask == 0x0)) {
+        return TRUE;
+    }
+
+    for (NvU32 head = 0; head < pDevEvo->numHeads; head++) {
+        if (!nvDpyIdListIsEmpty(pDispEvo->vbiosDpyConfig[head])) {
+            pHeadState = &pDispEvo->headState[head];
+
+            if ((pHeadState->activeRmId != 0x0) &&
+                (pDispEvo->isoBandwidthKBPS == 0) && (pDispEvo->dramFloorKBPS == 0)) {
+                nvEvoLogDev(pDevEvo, EVO_LOG_INFO,
+                            "Found active displayID: 0x%x initialized by UEFI on head %u", pHeadState->activeRmId, head);
+                uefiHandoff = TRUE;
+                break;
+            }
+        }
+    }
+
+    if (uefiHandoff)
+    {
+        params.subDeviceInstance = 0;
+        params.isoBandwidthKBPS = 0;
+        params.floorBandwidthKBPS = 0;
+        ret = nvRmApiControl(nvEvoGlobal.clientHandle,
+                             pDevEvo->displayCommonHandle,
+                             NV0073_CTRL_CMD_SYSTEM_QUERY_UEFI_DISPLAY_BANDWIDTH,
+                             &params, sizeof(params));
+        if (ret != NV_OK) {
+            nvEvoLogDev(pDevEvo, EVO_LOG_ERROR,
+                        "Failed to query IMP params for UEFI initialized firmware head");
+            return FALSE;
+        }
+
+        pDispEvo->isoBandwidthKBPS = NV_MAX(pDispEvo->isoBandwidthKBPS, params.isoBandwidthKBPS);
+        pDispEvo->dramFloorKBPS    = NV_MAX(pDispEvo->dramFloorKBPS, params.floorBandwidthKBPS);
+    }
+
+    return TRUE;
+}
+
+/*!
  * Validate the described disp configuration through IMP.
 
  * \param[in]      pDispEvo        The disp of the dpyIdList.
@@ -8002,20 +8057,22 @@ NvBool nvValidateImpOneDisp(
 
     switch (reallocBandwidth) {
         case NV_EVO_REALLOCATE_BANDWIDTH_MODE_PRE:
+            if (!QueryUefiIMPParams(pDispEvo, modesetRequestedHeadsMask)) {
+                return FALSE;
+            }
+
             needToRealloc = (impOutput.minRequiredBandwidthKBPS > pDispEvo->isoBandwidthKBPS) ||
                             (impOutput.floorBandwidthKBPS > pDispEvo->dramFloorKBPS);
             newIsoBandwidthKBPS =
                 NV_MAX(pDispEvo->isoBandwidthKBPS, impOutput.minRequiredBandwidthKBPS);
             newDramFloorKBPS =
                 NV_MAX(pDispEvo->dramFloorKBPS, impOutput.floorBandwidthKBPS);
-
             break;
         case NV_EVO_REALLOCATE_BANDWIDTH_MODE_POST:
             needToRealloc = (impOutput.minRequiredBandwidthKBPS != pDispEvo->isoBandwidthKBPS) ||
                             (impOutput.floorBandwidthKBPS != pDispEvo->dramFloorKBPS);
             newIsoBandwidthKBPS = impOutput.minRequiredBandwidthKBPS;
             newDramFloorKBPS = impOutput.floorBandwidthKBPS;
-
             break;
         case NV_EVO_REALLOCATE_BANDWIDTH_MODE_NONE:
         default:

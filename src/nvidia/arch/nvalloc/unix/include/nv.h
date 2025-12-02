@@ -596,6 +596,12 @@ typedef struct nv_state_t
         NvU32 dispNisoStreamId;
     } iommus;
 
+    struct {
+        NvU32 max_dispclk_rate_using_disppllkhz;
+        NvU32 max_dispclk_rate_using_sppll0clkoutakhz;
+        NvU32 max_hubclk_rate_using_sppll0clkoutbkhz;
+    } clocks;
+
     /* Console is managed by drm drivers or NVKMS */
     NvBool client_managed_console;
 } nv_state_t;
@@ -1038,6 +1044,7 @@ NV_STATUS NV_API_CALL nv_i2c_transfer(nv_state_t *, NvU32, NvU8, nv_i2c_msg_t *,
 void      NV_API_CALL nv_i2c_unregister_clients(nv_state_t *);
 NV_STATUS NV_API_CALL nv_i2c_bus_status(nv_state_t *, NvU32, NvS32 *, NvS32 *);
 NV_STATUS NV_API_CALL nv_imp_get_import_data     (TEGRA_IMP_IMPORT_DATA *);
+NV_STATUS NV_API_CALL nv_imp_get_uefi_data       (nv_state_t *nv, NvU32 *iso_bw_kbps, NvU32 *floor_bw_kbps);
 NV_STATUS NV_API_CALL nv_imp_enable_disable_rfl  (nv_state_t *nv, NvBool bEnable);
 NV_STATUS NV_API_CALL nv_imp_icc_set_bw          (nv_state_t *nv, NvU32 avg_bw_kbps, NvU32 floor_bw_kbps);
 NV_STATUS NV_API_CALL nv_get_num_dpaux_instances(nv_state_t *nv, NvU32 *num_instances);

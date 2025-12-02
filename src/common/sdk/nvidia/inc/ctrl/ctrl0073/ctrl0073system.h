@@ -2567,5 +2567,36 @@ typedef struct NV0073_CTRL_CMD_SYSTEM_GET_CRASH_LOCK_COUNTER_INFO_PARAMS {
     NvU32 counterValueV;
 } NV0073_CTRL_CMD_SYSTEM_GET_CRASH_LOCK_COUNTER_INFO_PARAMS;
 
+/*
+ * NV0073_CTRL_CMD_SYSTEM_QUERY_UEFI_DISPLAY_BANDWIDTH
+ *
+ * Queries the UEFI allocated ISO BW and Floor BW for Display.
+ *
+ *   subDeviceInstance
+ *     This parameter specifies the subdevice instance within the
+ *     NV04_DISPLAY_COMMON parent device to which the operation should be
+ *     directed.
+ *   isoBandwidthKBPS
+ *     ISO BW set by UEFI to initialize display
+ *   floorBandwidthKBPS
+ *     Floor BW set by UEFI to initialize display
+ *
+ * Possible status values returned are:
+ *   NV_OK
+ *   NV_ERR_INVALID_ARGUMENT
+ *   NV_ERR_NOT_SUPPORTED
+ *   NV_ERR_GENERIC
+ */
+
+#define NV0073_CTRL_CMD_SYSTEM_QUERY_UEFI_DISPLAY_BANDWIDTH (0x730161U) /* finn: Evaluated from "(FINN_NV04_DISPLAY_COMMON_SYSTEM_INTERFACE_ID << 8) | NV0073_CTRL_SYSTEM_QUERY_UEFI_DISPLAY_BANDWIDTH_PARAMS_MESSAGE_ID" */
+
+#define NV0073_CTRL_SYSTEM_QUERY_UEFI_DISPLAY_BANDWIDTH_PARAMS_MESSAGE_ID (0x61U)
+
+typedef struct NV0073_CTRL_SYSTEM_QUERY_UEFI_DISPLAY_BANDWIDTH_PARAMS {
+    NvU32 subDeviceInstance;
+    NvU32 isoBandwidthKBPS;
+    NvU32 floorBandwidthKBPS;
+} NV0073_CTRL_SYSTEM_QUERY_UEFI_DISPLAY_BANDWIDTH_PARAMS;
+
 /* _ctrl0073system_h_ */
 

@@ -644,6 +644,9 @@ rpcDceRmInit_dce
     OBJGPU *pGpu = (OBJGPU*)pRmApi->pPrivateContext;
     OBJRPC *pRpc = GPU_GET_RPC(pGpu);
     DceClient *pDceClientrm = GPU_GET_DCECLIENTRM(pGpu);
+    NvU32 maxDispClkRateDisppll = 0;
+    NvU32 maxDispClkRateSppllClkouta = 0;
+    NvU32 maxHubClkRateSppllClkoutb = 0;
 
     rpc_generic_union *msg_data;
     NV_STATUS status = NV_ERR_NOT_SUPPORTED;
@@ -664,7 +667,20 @@ rpcDceRmInit_dce
         goto done;
     }
 
-    rpc_params->bInit     = bInit;
+    if (bInit)
+    {
+        status = osTegraSocGetDispClockRates(pGpu->pOsGpuInfo, &maxDispClkRateDisppll, &maxDispClkRateSppllClkouta, &maxHubClkRateSppllClkoutb);
+        if (status != NV_OK)
+        {
+            NV_PRINTF(LEVEL_INFO, "NVRM_RPC_DCE: Retrieving disp clocks max rate Failed [0x%x]\n", status);
+        }
+    }
+
+    rpc_params->bInit                      = bInit;
+    rpc_params->maxDispClkRateDisppll      = maxDispClkRateDisppll;
+    rpc_params->maxDispClkRateSppllClkouta = maxDispClkRateSppllClkouta;
+    rpc_params->maxHubClkRateSppllClkoutb  = maxHubClkRateSppllClkoutb;
+
     status = _dceRpcIssueAndWait(pRmApi);
     if (status != NV_OK)
     {

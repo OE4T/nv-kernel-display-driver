@@ -4862,6 +4862,37 @@ osTegraSocGetImpImportData
 }
 
 /*!
+ * @brief Returns IMP-relevant data collected from UEFI
+ *
+ * This function is basically a wrapper to call the unix/linux layer.
+ *
+ * @param[in]   pOsGpuInfo    Per GPU Linux state
+ * @param[out]  pIsoBwKbps    ISO BW set by UEFI
+ * @param[out]  pFloorBwKbps  DRAM Floor BW set by UEFI
+ *
+ * @returns NV_OK if successful,
+ *          NV_ERR_NOT_SUPPORTED if the functionality is not available, or
+ *          other errors as may be returned by subfunctions.
+ */
+NV_STATUS
+osTegraSocGetImpUefiData
+(
+    OS_GPU_INFO *pOsGpuInfo,
+    NvU32 *pIsoBwKbps,
+    NvU32 *pFloorBwKbps
+)
+{
+    if (NV_IS_SOC_DISPLAY_DEVICE(pOsGpuInfo))
+    {
+        return nv_imp_get_uefi_data(pOsGpuInfo, pIsoBwKbps, pFloorBwKbps);
+    }
+    else
+    {
+        return NV_ERR_NOT_SUPPORTED;
+    }
+}
+
+/*!
  * @brief Tells BPMP whether or not RFL is valid
  *
  * Display HW generates an ok_to_switch signal which asserts when mempool
@@ -4890,6 +4921,42 @@ osTegraSocEnableDisableRfl
     if (NV_IS_SOC_DISPLAY_DEVICE(pOsGpuInfo))
     {
         return nv_imp_enable_disable_rfl(pOsGpuInfo, bEnable);
+    }
+    else
+    {
+        return NV_ERR_NOT_SUPPORTED;
+    }
+}
+
+/*!
+ * @brief Returns max rates for display clocks passed by UEFI
+ *
+ * @param[in]  pOsGpuInfo                   Per GPU Linux state
+ * @param[out] pMaxDispClkRateDisppll       disp clock maxrate with disppll as parent
+ * @param[out] pMaxDispClkRateSppllClkouta  disp clock maxrate with sppllclkouta as parent
+ * @param[out] pMaxHubClkRateSppllClkoutb   hub clock maxrate with sppllclkoutb as parent
+ *
+ * @returns NV_OK if successful,
+ *          NV_ERR_NOT_SUPPORTED if the functionality is not available
+ */
+NV_STATUS
+osTegraSocGetDispClockRates
+(
+    OS_GPU_INFO *pOsGpuInfo,
+    NvU32       *pMaxDispClkRateDisppll,
+    NvU32       *pMaxDispClkRateSppllClkouta,
+    NvU32       *pMaxHubClkRateSppllClkoutb
+)
+{
+    nv_state_t *nv = pOsGpuInfo;
+
+    if (NV_IS_SOC_DISPLAY_DEVICE(nv))
+    {
+        *pMaxDispClkRateDisppll = nv->clocks.max_dispclk_rate_using_disppllkhz;
+        *pMaxDispClkRateSppllClkouta = nv->clocks.max_dispclk_rate_using_sppll0clkoutakhz;
+        *pMaxHubClkRateSppllClkoutb = nv->clocks.max_hubclk_rate_using_sppll0clkoutbkhz;
+
+        return NV_OK;
     }
     else
     {

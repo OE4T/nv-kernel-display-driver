@@ -712,6 +712,60 @@ fail:
     return status;
 }
 
+#define DISP_CLK_NUM_PARENTS 2
+// This function gets called only for Tegra
+static NV_STATUS nv_platform_get_disp_clocks_max_rate(struct platform_device *plat_dev,
+                                              nv_state_t *nv)
+{
+    struct device_node *np = plat_dev->dev.of_node;
+    u32 value = 0;
+    u32 disp_clk_rates[DISP_CLK_NUM_PARENTS];
+    NV_STATUS status = NV_OK;
+    int ret = 0;
+
+    nv->clocks.max_dispclk_rate_using_disppllkhz = 0;
+    nv->clocks.max_dispclk_rate_using_sppll0clkoutakhz = 0;
+    nv->clocks.max_hubclk_rate_using_sppll0clkoutbkhz = 0;
+
+    /* Parse disp clock max rates for each possible parent passed by UEFI */
+    ret = of_property_read_u32_array(np, "nvidia,max-disp-clk-rate-khz", disp_clk_rates, DISP_CLK_NUM_PARENTS);
+    if (ret == 0)
+    {
+        nv->clocks.max_dispclk_rate_using_disppllkhz = disp_clk_rates[0];
+        nv->clocks.max_dispclk_rate_using_sppll0clkoutakhz = disp_clk_rates[1];
+    }
+    else if (ret == -EINVAL)
+    {
+        nv_printf(NV_DBG_INFO, "NVRM: nv_platform_get_disp_clocks_max_rate, nvidia,max-disp-clk-rate-khz not specified under display node\n");
+    }
+    else
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: nv_platform_get_disp_clocks_max_rate, nvidia,max-disp-clk-rate-khz has invalid value\n");
+        status = NV_ERR_GENERIC;
+        goto fail;
+    }
+
+    /* Parse hub clock max rate for its parent passed by UEFI */
+    ret = of_property_read_u32(np, "nvidia,max-hub-clk-rate-khz", &value);
+    if (ret == 0)
+    {
+        nv->clocks.max_hubclk_rate_using_sppll0clkoutbkhz = value;
+    }
+    else if (ret == -EINVAL)
+    {
+        nv_printf(NV_DBG_INFO, "NVRM: nv_platform_get_disp_clocks_max_rate, nvidia,max-hub-clk-rate-khz not specified under display node\n");
+    }
+    else
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: nv_platform_get_disp_clocks_max_rate, nvidia,max-hub-clk-rate-khz has invalid value\n");
+        status = NV_ERR_GENERIC;
+        goto fail;
+    }
+
+fail:
+    return status;
+}
+
 static int nv_platform_register_mapping_devs(struct platform_device *plat_dev,
                                              nv_state_t *nv)
 {
@@ -907,6 +961,14 @@ static int nv_platform_device_display_probe(struct platform_device *plat_dev)
     if (status != NV_OK)
     {
         nv_printf(NV_DBG_ERRORS, "NVRM: nv_platform_device_display_probe: parsing ISO/NISO StreamIDs failed\n");
+        goto err_release_mem_region_regs;
+    }
+
+    // Parse Display Clocks max rates passed by UEFI through DT
+    status = nv_platform_get_disp_clocks_max_rate(plat_dev, nv);
+    if (status != NV_OK)
+    {
+        nv_printf(NV_DBG_ERRORS, "NVRM: nv_platform_device_display_probe: parsing display clocks max rates failed\n");
         goto err_release_mem_region_regs;
     }
 

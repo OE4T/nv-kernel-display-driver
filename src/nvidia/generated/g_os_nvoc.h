@@ -676,6 +676,7 @@ NV_STATUS osTegraSocBpmpSendMrq(OBJGPU      *pGpu,
                                 NvS32       *pApiRet);
 NV_STATUS osMapGsc(NvU64 gsc_base, NvU64 *va);
 NV_STATUS osTegraSocGetImpImportData(OBJGPU *pGpu, TEGRA_IMP_IMPORT_DATA *pTegraImpImportData);
+NV_STATUS osTegraSocGetImpUefiData(OS_GPU_INFO *pOsGpuInfo, NvU32 *pIsoBwKbps, NvU32 *pFloorBwKbps);
 NV_STATUS osTegraSocEnableDisableRfl(OS_GPU_INFO *pOsGpuInfo, NvBool bEnable);
 NV_STATUS osTegraAllocateDisplayBandwidth(OS_GPU_INFO *pOsGpuInfo,
                                           NvU32 averageBandwidthKBPS,
@@ -846,6 +847,10 @@ NV_STATUS osTegraDceRegisterIpcClient(NvU32 interfaceType, void *usrCtx,
 NV_STATUS osTegraDceClientIpcSendRecv(NvU32 clientId, void *msg,
                                       NvU32 msgLength);
 NV_STATUS osTegraDceUnregisterIpcClient(NvU32 clientId);
+NV_STATUS osTegraSocGetDispClockRates(OS_GPU_INFO *pOsGpuInfo,
+                                      NvU32 *pMaxDispClkRateDisppll,
+                                      NvU32 *pMaxDispClkRateSppllClkouta,
+                                      NvU32 *pMaxHubClkRateSppllClkoutb);
 
 //
 // Define OS-layer specific type instead of #include "clk_domains.h" for
