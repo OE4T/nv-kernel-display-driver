@@ -75,6 +75,8 @@ static const char *osMapClk[] = {
     [TEGRASOC_WHICH_CLK_SPPLL0_DIV10]      = "sppll0_div10_clk",
     [TEGRASOC_WHICH_CLK_SPPLL0_DIV25]      = "sppll0_div25_clk",
     [TEGRASOC_WHICH_CLK_SPPLL1_VCO]        = "sppll1_vco_clk",
+    [TEGRASOC_WHICH_CLK_SPPLL0]            = "sppll0",
+    [TEGRASOC_WHICH_CLK_SPPLL1]            = "sppll1",
     [TEGRASOC_WHICH_CLK_VPLL0_REF]         = "vpll0_ref_clk",
     [TEGRASOC_WHICH_CLK_VPLL0]             = "vpll0_clk",
     [TEGRASOC_WHICH_CLK_VPLL1]             = "vpll1_clk",
@@ -159,7 +161,10 @@ static const char *osMapClk[] = {
     [TEGRASOC_WHICH_CLK_AZA_BIT]           = "aza_bit_clk",
     [TEGRASOC_WHICH_CLK_MIPI_CAL]          = "mipi_cal_clk",
     [TEGRASOC_WHICH_CLK_UART_FST_MIPI_CAL] = "uart_fst_mipi_cal_clk",
-    [TEGRASOC_WHICH_CLK_SOR0_DIV]          = "sor0_div_clk",
+    [TEGRASOC_WHICH_CLK_SOR0_DIV]          = "sor0_div",
+    [TEGRASOC_WHICH_CLK_SOR1_DIV]          = "sor1_div",
+    [TEGRASOC_WHICH_CLK_SOR2_DIV]          = "sor2_div",
+    [TEGRASOC_WHICH_CLK_SOR3_DIV]          = "sor3_div",
     [TEGRASOC_WHICH_CLK_DISP_ROOT]         = "disp_root",
     [TEGRASOC_WHICH_CLK_HUB_ROOT]          = "hub_root",
     [TEGRASOC_WHICH_CLK_PLLA_DISP]         = "plla_disp",
@@ -242,7 +247,6 @@ NV_STATUS NV_API_CALL nv_clk_get_handles(
         if (j == TEGRASOC_WHICH_CLK_MAX)
         {
             nv_printf(NV_DBG_ERRORS,"NVRM: nv_clk_get_handles, failed to find TEGRA_SOC_WHICH_CLK for %s\n", clks[i].id);
-            return NV_ERR_OBJECT_NOT_FOUND;
         }
     }
 #else

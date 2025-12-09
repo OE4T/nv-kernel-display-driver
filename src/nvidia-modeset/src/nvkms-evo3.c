@@ -3207,7 +3207,8 @@ static NvBool AssignPerHeadImpParams(NVC372_CTRL_IMP_HEAD *pImpHead,
                                      const NvBool enableDsc,
                                      const NvBool b2Heads1Or,
                                      const int head,
-                                     const NVEvoScalerCaps *pScalerCaps)
+                                     const NVEvoScalerCaps *pScalerCaps,
+                                     const NvU32 possibleDscSliceCountMask)
 {
     const NVHwModeViewPortEvo *pViewPort = &pTimings->viewPort;
     struct NvKmsScalingUsageBounds scalingUsageBounds = { };
@@ -3260,6 +3261,7 @@ static NvBool AssignPerHeadImpParams(NVC372_CTRL_IMP_HEAD *pImpHead,
     pImpHead->cursorSize32p = 256 / 32;
 
     pImpHead->bEnableDsc = enableDsc;
+    pImpHead->possibleDscSliceCountMask = possibleDscSliceCountMask;
 
     pImpHead->bIs2Head1Or = b2Heads1Or;
 
@@ -3394,7 +3396,8 @@ nvEvoSetCtrlIsModePossibleParams3(NVDispEvoPtr pDispEvo,
                                     enableDsc,
                                     b2Heads1Or,
                                     head,
-                                    &pEvoCaps->head[head].scalerCaps)) {
+                                    &pEvoCaps->head[head].scalerCaps,
+                                    pInput->head[head].possibleDscSliceCountMask)) {
             return FALSE;
         }
 

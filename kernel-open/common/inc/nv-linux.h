@@ -1471,7 +1471,6 @@ typedef struct nv_linux_state_s {
     struct reset_control *nvdisplay_reset;
     struct reset_control *dsi_core_reset;
     struct reset_control *mipi_cal_reset;
-    struct reset_control *hdacodec_reset;
 
     /*
      * nv_imp_icc_path represents the interconnect path across which display

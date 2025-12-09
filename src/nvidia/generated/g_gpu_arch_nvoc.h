@@ -191,6 +191,22 @@ static inline NvBool gpuarchSupportsIgpuRg(struct GpuArch *pGpuArch) {
 
 #define gpuarchSupportsIgpuRg_HAL(pGpuArch) gpuarchSupportsIgpuRg(pGpuArch)
 
+static inline NvU32 gpuarchGetGpcFuseStatusOffset_4a4dee(struct GpuArch *pGpuArch) {
+    return 0;
+}
+
+
+#ifdef __nvoc_gpu_arch_h_disabled
+static inline NvU32 gpuarchGetGpcFuseStatusOffset(struct GpuArch *pGpuArch) {
+    NV_ASSERT_FAILED_PRECOMP("GpuArch was disabled!");
+    return 0;
+}
+#else //__nvoc_gpu_arch_h_disabled
+#define gpuarchGetGpcFuseStatusOffset(pGpuArch) gpuarchGetGpcFuseStatusOffset_4a4dee(pGpuArch)
+#endif //__nvoc_gpu_arch_h_disabled
+
+#define gpuarchGetGpcFuseStatusOffset_HAL(pGpuArch) gpuarchGetGpcFuseStatusOffset(pGpuArch)
+
 NV_STATUS gpuarchConstruct_IMPL(struct GpuArch *arg_pGpuArch, NvU32 arg_chipArch, NvU32 arg_chipImpl, NvU32 arg_hidrev, TEGRA_CHIP_TYPE arg_tegraType);
 
 #define __nvoc_gpuarchConstruct(arg_pGpuArch, arg_chipArch, arg_chipImpl, arg_hidrev, arg_tegraType) gpuarchConstruct_IMPL(arg_pGpuArch, arg_chipArch, arg_chipImpl, arg_hidrev, arg_tegraType)

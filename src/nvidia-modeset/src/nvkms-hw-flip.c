@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2014 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2014 - 2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -1717,14 +1717,16 @@ ValidateColorspace(const NVDevEvoRec *pDevEvo,
                    const NVFlipEvoHwState *pFlipState,
                    NvU32 layer)
 {
+    NVSurfaceEvoPtr pSurfaceEvo =
+        pFlipState->layer[layer].pSurfaceEvo[NVKMS_LEFT];
+    if (pSurfaceEvo == NULL) {
+        return TRUE;
+    }
+
     if ((pFlipState->layer[layer].colorSpace !=
          NVKMS_INPUT_COLOR_SPACE_NONE)) {
-
-        NVSurfaceEvoPtr pSurfaceEvo =
-            pFlipState->layer[layer].pSurfaceEvo[NVKMS_LEFT];
         const NvKmsSurfaceMemoryFormatInfo *pFormatInfo =
-            (pSurfaceEvo != NULL) ?
-                nvKmsGetSurfaceMemoryFormatInfo(pSurfaceEvo->format) : NULL;
+                nvKmsGetSurfaceMemoryFormatInfo(pSurfaceEvo->format);
 
         if (pFormatInfo == NULL) {
             return FALSE;

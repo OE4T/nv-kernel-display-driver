@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015-2022, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2025, NVIDIA CORPORATION. All rights reserved.
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
  * copy of this software and associated documentation files (the "Software"),
@@ -201,6 +201,15 @@ plane_req_config_disable(struct NvKmsKapiLayerRequestedConfig *req_config)
     req_config->flags.srcWHChanged = NV_TRUE;
     req_config->flags.dstXYChanged = NV_TRUE;
     req_config->flags.dstWHChanged = NV_TRUE;
+    req_config->flags.cscChanged = NV_TRUE;
+    req_config->flags.inputTfChanged = NV_TRUE;
+    req_config->flags.outputTfChanged = NV_TRUE;
+    req_config->flags.inputColorSpaceChanged = NV_TRUE;
+    req_config->flags.inputColorRangeChanged = NV_TRUE;
+    req_config->flags.hdrMetadataChanged = NV_TRUE;
+    req_config->flags.matrixOverridesChanged = NV_TRUE;
+    req_config->flags.ilutChanged = NV_TRUE;
+    req_config->flags.tmoChanged = NV_TRUE;
 }
 
 static inline void
