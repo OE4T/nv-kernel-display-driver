@@ -381,7 +381,11 @@ typedef struct ADDRESS_TRANSLATION_ *ADDRESS_TRANSLATION;
 // 32-bit addressable.
 #define MEMDESC_FLAGS_ALLOC_32BIT_ADDRESSABLE      NVBIT64(41)
 
-// unused                                          NVBIT64(42)
+//
+// This flag causes linux to not try as hard to reclaim used pages. Useful when
+// we are retrying with successively smaller page sizes as in sysmemConstruct.
+//
+#define MEMDESC_FLAGS_ALLOC_NO_RECLAIM             NVBIT64(42)
 
 //
 // If this flag is set then it indicates that the memory associated with

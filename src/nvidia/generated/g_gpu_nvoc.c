@@ -429,6 +429,9 @@ void __nvoc_init_dataField_OBJGPU(OBJGPU *pThis) {
         pThis->bInstanceMemoryAlwaysCached = NV_TRUE;
     }
 
+    // Hal field -- bAPageSizeAllocRetryEnabled
+    pThis->bAPageSizeAllocRetryEnabled = NV_FALSE;
+
     // Hal field -- bComputePolicyTimesliceSupported
     // default
     {

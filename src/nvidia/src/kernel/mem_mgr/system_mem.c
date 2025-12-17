@@ -154,7 +154,9 @@ sysmemConstruct_IMPL
     MEMORY_DESCRIPTOR *pMemDesc;
     NvU32 flags;
     RM_ATTR_PAGE_SIZE pageSizeAttr;
-    NvBool bRetry = NV_FALSE;
+    NvBool bLastAttempt = NV_TRUE;
+
+    pGpu->bAPageSizeAllocRetryEnabled = NV_FALSE;
 
     NV_ASSERT_OR_RETURN(pRmClient != NULL, NV_ERR_INVALID_CLIENT);
 
@@ -203,7 +205,8 @@ sysmemConstruct_IMPL
     if (FLD_TEST_DRF(OS32, _ATTR, _PAGE_SIZE, _DEFAULT, pAllocData->attr) &&
         (GPU_GET_MEMORY_MANAGER(pGpu)->bSysmemPageSizeDefaultAllowLargePages))
     {
-        bRetry = NV_TRUE;
+        pGpu->bAPageSizeAllocRetryEnabled = NV_TRUE;
+        bLastAttempt = NV_FALSE;
     }
 
     do
@@ -247,6 +250,8 @@ sysmemConstruct_IMPL
         if (FLD_TEST_DRF(OS32, _ATTR2, _NISO_DISPLAY, _YES, pAllocData->attr2))
             memdescSetFlag(pMemDesc, MEMDESC_FLAGS_MEMORY_TYPE_DISPLAY_NISO, NV_TRUE);
 
+        memdescSetFlag(pMemDesc, MEMDESC_FLAGS_ALLOC_NO_RECLAIM, !bLastAttempt);
+
         memdescSetFlag(pMemDesc, MEMDESC_FLAGS_SYSMEM_OWNED_BY_CLIENT, NV_TRUE);
 
         if (FLD_TEST_DRF(OS32, _ATTR2, _FIXED_NUMA_NODE_ID, _YES, pAllocData->attr2))
@@ -273,13 +278,21 @@ sysmemConstruct_IMPL
         memdescTagAlloc(rmStatus, NV_FB_ALLOC_RM_INTERNAL_OWNER_UNNAMED_TAG_132, pMemDesc);
         if (rmStatus != NV_OK)
         {
-            if (bRetry)
+            if (pGpu->bAPageSizeAllocRetryEnabled)
             {
                 NvU64 pageSize;
                 pageSize = _sysmemGetNextSmallerPageSize(pGpu, &pAllocData->attr, &pAllocData->attr2);
                 if (pageSize == 0)
                 {
-                    NV_CHECK_OK_OR_GOTO(rmStatus, LEVEL_ERROR, rmStatus, failed_destroy_memdesc);
+                    NV_CHECK_OR_GOTO(LEVEL_ERROR, !bLastAttempt, failed_destroy_memdesc);
+                    bLastAttempt = NV_TRUE;
+                    NV_PRINTF(LEVEL_INFO,
+                        "Sysmem alloc failed at 4K page size, retrying with reclamation enabled.\n");
+                }
+                else
+                {
+                    NV_PRINTF(LEVEL_INFO,
+                        "Sysmem alloc failed, retrying with page size 0x%llx.\n", pageSize);
                 }
                 NV_PRINTF(LEVEL_INFO, "Sysmem alloc failed, retrying with page size 0x%llx.\n", pageSize);
 
@@ -297,9 +310,10 @@ sysmemConstruct_IMPL
         else
         {
             // Got a valid allocation, set retry to false.
-            bRetry = NV_FALSE;
+            pGpu->bAPageSizeAllocRetryEnabled = NV_FALSE;
         }
-    } while (bRetry);
+    } while (pGpu->bAPageSizeAllocRetryEnabled);
+    pGpu->bAPageSizeAllocRetryEnabled = NV_FALSE;
 
     // ClientDB can set the pagesize for memdesc.
     // With GPU SMMU mapping, this needs to be set on the SMMU memdesc.

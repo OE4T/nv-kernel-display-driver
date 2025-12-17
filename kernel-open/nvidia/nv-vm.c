@@ -278,6 +278,12 @@ static unsigned int nv_compute_gfp_mask(
     if (at->order > 0)
         gfp_mask |= __GFP_COMP;
 
+    if (at->flags.no_reclaim)
+    {
+        gfp_mask &= ~(__GFP_RETRY_MAYFAIL | __GFP_RECLAIM);
+        gfp_mask |= __GFP_NORETRY;
+    }
+
     return gfp_mask;
 }
 

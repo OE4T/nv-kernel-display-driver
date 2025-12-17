@@ -1051,10 +1051,17 @@ memdescAlloc
     }
 
     // Actually allocate the memory
-    NV_CHECK_OK(status, LEVEL_ERROR, _memdescAllocInternal(pMemDesc));
-
+    status = _memdescAllocInternal(pMemDesc);
     if (status != NV_OK)
     {
+        if (status == NV_ERR_NO_MEMORY && pGpu->bAPageSizeAllocRetryEnabled && pMemDesc->_pageSize != RM_PAGE_SIZE)
+        {
+            NV_PRINTF(LEVEL_INFO, "Failed to allocate memory due to insufficient memory with page size 0x%llx, retrying with page size 0x%x\n", pMemDesc->_pageSize, RM_PAGE_SIZE);
+        }
+        else
+        {
+            NV_PRINTF(LEVEL_ERROR, "Failed to allocate memory with page size 0x%llx\n status: %x", pMemDesc->_pageSize, status);
+        }
         pMemDesc->pHeap = NULL;
     }
 

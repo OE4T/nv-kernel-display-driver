@@ -3717,15 +3717,7 @@ void NV_API_CALL nv_free_kernel_mapping(
 
 NV_STATUS NV_API_CALL nv_alloc_pages(
     nv_state_t *nv,
-    NvU32       page_count,
-    NvU64       page_size,
-    NvBool      contiguous,
-    NvU32       cache_type,
-    NvBool      zeroed,
-    NvBool      unencrypted,
-    NvS32       node_id,
-    NvU64      *pte_array,
-    void      **priv_data
+    nv_allocation_request_t *alloc_request
 )
 {
     nv_alloc_t *at;
@@ -3734,6 +3726,16 @@ NV_STATUS NV_API_CALL nv_alloc_pages(
     NvBool will_remap = NV_FALSE;
     NvU32 i;
     struct device *dev = NULL;
+    NvU32 page_count = alloc_request->count;
+    NvU64 page_size = alloc_request->page_size;
+    NvBool contiguous = alloc_request->alloc_type_contiguous;
+    NvU32 cache_type = alloc_request->cache_type;
+    NvBool zeroed = alloc_request->alloc_type_zeroed;
+    NvBool unencrypted = alloc_request->unencrypted;
+    NvBool no_reclaim = alloc_request->no_reclaim;
+    NvS32 node_id = alloc_request->node_id;
+    NvU64 *pte_array = alloc_request->pte_array;
+    void **priv_data = alloc_request->private;
 
     nv_printf(NV_DBG_MEMINFO, "NVRM: VM: nv_alloc_pages: %d pages, nodeid %d\n", page_count, node_id);
     nv_printf(NV_DBG_MEMINFO, "NVRM: VM:    contig %d  cache_type %d\n",
@@ -3775,6 +3777,8 @@ NV_STATUS NV_API_CALL nv_alloc_pages(
         at->flags.node = NV_TRUE;
         at->node_id = node_id;
     }
+
+    at->flags.no_reclaim = no_reclaim;
 
     if (at->flags.contig)
     {

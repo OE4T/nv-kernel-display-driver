@@ -78,13 +78,6 @@
 #include <linux/pci-ats.h>
 #endif
 
-/*
- * Set the default devfreq suspend frequency to 315 MHz
- * considering the balance between power consumption
- * and performance based on various scenarios.
- */
-#define NV_PCI_TEGRA_DEVFREQ_SUSPEND_FREQ 315000000
-
 extern int NVreg_GrdmaPciTopoCheckOverride;
 
 static void
@@ -658,18 +651,13 @@ nv_pci_gb10b_devfreq_target(struct device *dev, unsigned long *freq, u32 flags)
     u32 kBps;
 #endif
 
-    //
-    // GPU can be under suspending/suspended/resuming state defined the runtime
-    // PM (RPM) framework. When device is under either of these states, DVFS based
-    // on GPU load information should be disabled.
-    //
-    // Complete load-based DVFS cycle involve GPU load query through rmapi and
-    // clock scaling through BPMP MRQ_CLK mailbox request, which will awake the
-    // GPU and contradict the suspended state.
-    //
-    if (!pm_runtime_active(&pdev->dev))
+    /*
+     * If the device is suspended, skip the frequency scaling
+     * because the clocks may be unavailable.
+     * Otherwise, set the clocks to the target frequency.
+     */
+    if (pm_runtime_suspended(&pdev->dev))
     {
-        *freq = tdev->devfreq->scaling_min_freq;
         return 0;
     }
 
@@ -753,10 +741,13 @@ nv_pci_tegra_devfreq_get_cur_freq(struct device *dev, unsigned long *freq)
     // will further call the get_dev_status callback function.
     //
     if (pm_runtime_active(dev->parent))
+    {
         *freq = clk_get_rate(tdev->clk);
+    }
     else
-        *freq = tdev->devfreq->scaling_min_freq;
-
+    {
+        *freq = tdev->devfreq->previous_freq;
+    }
     return 0;
 }
 
@@ -786,7 +777,7 @@ nv_pci_tegra_devfreq_get_dev_status(struct device *dev,
     {
         stat->total_time = 100;
         stat->busy_time = 0;
-        stat->current_frequency = tdev->devfreq->scaling_min_freq;
+        stat->current_frequency = tdev->devfreq->previous_freq;
         return 0;
     }
 
@@ -1198,13 +1189,6 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
             nvl->gpc_devfreq_dev->devfreq = NULL;
             goto error_slave_teardown;
         }
-#if defined(NV_DEVFREQ_HAS_SUSPEND_FREQ)
-        else
-        {
-            // Set the devfreq suspend frequency for the GPC devfreq device.
-            nvl->gpc_devfreq_dev->devfreq->suspend_freq = nvl->tegra_suspend_freq;
-        }
-#endif
         if (nvl->sys_devfreq_dev != NULL)
         {
             list_add_tail(&nvl->sys_devfreq_dev->gpc_cluster, &nvl->gpc_devfreq_dev->gpc_cluster);
@@ -1226,13 +1210,6 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
             nvl->nvd_devfreq_dev->devfreq = NULL;
             goto error_slave_teardown;
         }
-#if defined(NV_DEVFREQ_HAS_SUSPEND_FREQ)
-        else
-        {
-            // Set the devfreq suspend frequency for the NVD devfreq device.
-            nvl->nvd_devfreq_dev->devfreq->suspend_freq = nvl->tegra_suspend_freq;
-        }
-#endif
         if (nvl->sys_devfreq_dev != NULL)
         {
             list_add_tail(&nvl->sys_devfreq_dev->nvd_cluster, &nvl->nvd_devfreq_dev->nvd_cluster);
@@ -1285,6 +1262,10 @@ nv_pci_gb10b_suspend_devfreq(struct device *dev)
 
     if (nvl->gpc_devfreq_dev != NULL && nvl->gpc_devfreq_dev->devfreq != NULL)
     {
+        mutex_lock(&nvl->gpc_devfreq_dev->devfreq->lock);
+        nvl->gpc_devfreq_dev->devfreq->suspend_freq = nvl->gpc_devfreq_dev->devfreq->previous_freq;
+        mutex_unlock(&nvl->gpc_devfreq_dev->devfreq->lock);
+
         err = devfreq_suspend_device(nvl->gpc_devfreq_dev->devfreq);
         if (err)
         {
@@ -1301,6 +1282,10 @@ nv_pci_gb10b_suspend_devfreq(struct device *dev)
 
     if (nvl->nvd_devfreq_dev != NULL && nvl->nvd_devfreq_dev->devfreq != NULL)
     {
+        mutex_lock(&nvl->nvd_devfreq_dev->devfreq->lock);
+        nvl->nvd_devfreq_dev->devfreq->suspend_freq = nvl->nvd_devfreq_dev->devfreq->previous_freq;
+        mutex_unlock(&nvl->nvd_devfreq_dev->devfreq->lock);
+
         err = devfreq_suspend_device(nvl->nvd_devfreq_dev->devfreq);
         if (err)
         {
@@ -1332,6 +1317,17 @@ nv_pci_gb10b_resume_devfreq(struct device *dev)
         {
             return err;
         }
+        /*
+         * During GPU runtime suspended state, switching the devfreq governor
+         * which doesn't poll for GPU utilization could lead to devfreq
+         * frequency not being updated after runtime resume.
+         *
+         * Manually trigger the devfreq update here to ensure the
+         * frequency is compliant with the devfreq governor.
+         */
+        mutex_lock(&nvl->gpc_devfreq_dev->devfreq->lock);
+        update_devfreq(nvl->gpc_devfreq_dev->devfreq);
+        mutex_unlock(&nvl->gpc_devfreq_dev->devfreq->lock);
     }
 
     if (nvl->nvd_devfreq_dev != NULL && nvl->nvd_devfreq_dev->devfreq != NULL)
@@ -1341,6 +1337,9 @@ nv_pci_gb10b_resume_devfreq(struct device *dev)
         {
             return err;
         }
+        mutex_lock(&nvl->nvd_devfreq_dev->devfreq->lock);
+        update_devfreq(nvl->nvd_devfreq_dev->devfreq);
+        mutex_unlock(&nvl->nvd_devfreq_dev->devfreq->lock);
     }
 
     return err;
@@ -1592,10 +1591,6 @@ nv_pci_tegra_register_devfreq(struct pci_dev *pdev)
     nv_linux_state_t *nvl = pci_get_drvdata(pdev);
     const struct nv_pci_tegra_data *tegra_data = NULL;
     int err;
-#if defined(NV_DEVFREQ_HAS_SUSPEND_FREQ)
-    struct device_node *np = pdev->dev.of_node;
-    NvU32 suspend_freq = 0;
-#endif
 
     tegra_data = nv_pci_get_tegra_igpu_data(pdev);
 
@@ -1610,15 +1605,6 @@ nv_pci_tegra_register_devfreq(struct pci_dev *pdev)
     nvl->devfreq_resume = tegra_data->devfreq_resume;
     nvl->devfreq_enable_boost = tegra_data->devfreq_enable_boost;
     nvl->devfreq_disable_boost = tegra_data->devfreq_disable_boost;
-
-#if defined(NV_DEVFREQ_HAS_SUSPEND_FREQ)
-    of_property_read_u32(np, "nvidia,suspend-freq", &suspend_freq);
-    if (suspend_freq == 0)
-    {
-        suspend_freq = NV_PCI_TEGRA_DEVFREQ_SUSPEND_FREQ;
-    }
-    nvl->tegra_suspend_freq = suspend_freq;
-#endif
 
     err = tegra_data->devfreq_register(pdev);
     if (err != 0)

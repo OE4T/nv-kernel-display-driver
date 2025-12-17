@@ -1293,6 +1293,7 @@ struct OBJGPU {
     NvBool bClientRmAllocatedCtxBuffer;
     NvBool bEccPageRetirementWithSliAllowed;
     NvBool bInstanceMemoryAlwaysCached;
+    NvBool bAPageSizeAllocRetryEnabled;
     NvBool bUseRpcSimEscapes;
     NvBool bRmProfilingPrivileged;
     NvBool bGeforceSmb;

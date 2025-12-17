@@ -740,6 +740,20 @@ typedef enum
     NV_MEMORY_TYPE_DEVICE_MMIO, /* All kinds of MMIO referred by NVRM e.g. BARs and MCFG of device */
 } nv_memory_type_t;
 
+typedef struct nv_allocation_request_s
+{
+    NvU32 count;
+    NvU64 page_size;
+    NvBool alloc_type_contiguous;
+    NvU32 cache_type;
+    NvBool alloc_type_zeroed;
+    NvBool unencrypted;
+    NvBool no_reclaim;
+    NvS32 node_id;
+    NvU64 *pte_array;
+    void **private;
+} nv_allocation_request_t;
+
 #define NV_PRIMARY_VGA(nv)      ((nv)->primary_vga)
 
 #define NV_IS_CTL_DEVICE(nv)    ((nv)->flags & NV_FLAG_CONTROL)
@@ -911,7 +925,7 @@ nv_state_t*  NV_API_CALL  nv_get_ctl_state       (void);
 void   NV_API_CALL  nv_set_dma_address_size      (nv_state_t *, NvU32 );
 
 NV_STATUS  NV_API_CALL  nv_alias_pages           (nv_state_t *, NvU32, NvU64, NvU32, NvU32, NvU64, NvU64 *, NvBool, void **);
-NV_STATUS  NV_API_CALL  nv_alloc_pages           (nv_state_t *, NvU32, NvU64, NvBool, NvU32, NvBool, NvBool, NvS32, NvU64 *, void **);
+NV_STATUS  NV_API_CALL  nv_alloc_pages           (nv_state_t *, nv_allocation_request_t *);
 NV_STATUS  NV_API_CALL  nv_free_pages            (nv_state_t *, NvU32, NvBool, NvU32, void *);
 
 NV_STATUS  NV_API_CALL  nv_register_user_pages   (nv_state_t *, NvU64, NvU64 *, void *, void **, NvBool);

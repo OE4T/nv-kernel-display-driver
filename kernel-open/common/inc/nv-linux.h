@@ -1055,6 +1055,7 @@ typedef struct nv_alloc_s {
         NvBool unencrypted : 1;
         NvBool coherent    : 1;
         NvBool carveout    : 1;
+        NvBool no_reclaim  : 1;
     } flags;
     unsigned int   cache_type;
     unsigned int   num_pages;
@@ -1540,7 +1541,6 @@ typedef struct nv_linux_state_s {
     struct nv_pci_tegra_devfreq_dev *nvd_devfreq_dev;
     struct nv_pci_tegra_devfreq_dev *sys_devfreq_dev;
     struct nv_pci_tegra_devfreq_dev *pwr_devfreq_dev;
-    NvU32 tegra_suspend_freq;
 
     int (*devfreq_suspend)(struct device *dev);
     int (*devfreq_resume)(struct device *dev);

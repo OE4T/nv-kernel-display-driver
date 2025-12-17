@@ -894,18 +894,24 @@ NV_STATUS osAllocPagesInternal(
         if (status != NV_OK)
             goto done;
 
-        status = nv_alloc_pages(
-            NV_GET_NV_STATE(pGpu),
-            osPageCount,  // TODO: This call needs to receive the page count param at the requested page size.
-            pageSize,
-            memdescGetContiguity(pMemDesc, AT_CPU),
-            cpuCacheAttrib,
-            pSys->getProperty(pSys,
-                PDB_PROP_SYS_INITIALIZE_SYSTEM_MEMORY_ALLOCATIONS),
-            unencrypted,
-            nodeId,
-            memdescGetPteArray(pMemDesc, AT_CPU),
-            &pMemData);
+        {
+            nv_allocation_request_t alloc_request = {0};
+            alloc_request.count = osPageCount;  // TODO: This call needs to receive the page count param at the requested page size.
+            alloc_request.page_size = pageSize;
+            alloc_request.alloc_type_contiguous = memdescGetContiguity(pMemDesc, AT_CPU);
+            alloc_request.cache_type = cpuCacheAttrib;
+            alloc_request.alloc_type_zeroed = pSys->getProperty(pSys,
+                PDB_PROP_SYS_INITIALIZE_SYSTEM_MEMORY_ALLOCATIONS);
+            alloc_request.unencrypted = unencrypted;
+            alloc_request.no_reclaim = memdescGetFlag(pMemDesc, MEMDESC_FLAGS_ALLOC_NO_RECLAIM);
+            alloc_request.node_id = nodeId;
+            alloc_request.pte_array = memdescGetPteArray(pMemDesc, AT_CPU);
+            alloc_request.private = &pMemData;
+
+            status = nv_alloc_pages(
+                NV_GET_NV_STATE(pGpu),
+                &alloc_request);
+        }
 
         if (nv && nv->force_dma32_alloc)
             nv->force_dma32_alloc = NV_FALSE;
