@@ -5045,8 +5045,12 @@ NV_STATUS NV_API_CALL nv_set_primary_vga_status(
     nvl = NV_GET_NVL_FROM_NV_STATE(nv);
     pci_dev = nvl->pci_dev;
 
-    nv->primary_vga = ((NV_PCI_RESOURCE_FLAGS(pci_dev, PCI_ROM_RESOURCE) &
-        IORESOURCE_ROM_SHADOW) == IORESOURCE_ROM_SHADOW);
+    if (pci_dev != NULL)
+    {
+        nv->primary_vga = ((NV_PCI_RESOURCE_FLAGS(pci_dev, PCI_ROM_RESOURCE) &
+            IORESOURCE_ROM_SHADOW) == IORESOURCE_ROM_SHADOW);
+    }
+
     return NV_OK;
 #else
     return NV_ERR_NOT_SUPPORTED;
