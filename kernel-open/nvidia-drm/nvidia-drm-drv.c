@@ -2085,6 +2085,7 @@ void nv_drm_register_drm_device(const struct NvKmsKapiGpuInfo *gpu_info)
 #elif defined(NV_APERTURE_REMOVE_CONFLICTING_DEVICES_PRESENT)
                 aperture_remove_conflicting_devices(base, size, nv_drm_driver.name);
 #endif
+                nvKms->framebufferConsoleDisabled(nv_dev->pDevice);
             } else {
                 NV_DRM_DEV_LOG_INFO(nv_dev, "Invalid framebuffer console info");
             }

@@ -672,6 +672,11 @@ RmAssignPrimaryVga(
     OBJGPU     *pGpu
 )
 {
+    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_TEGRA_SOC_NVDISPLAY))
+    {
+        return;
+    }
+
     //
     // Check with the OS for the primary VGA status of the adapter. If it knows
     // definitively (nv_set_primary_vga_status() returns NV_OK), then we should
@@ -694,11 +699,6 @@ static void
 RmDeterminePrimaryDevice(OBJGPU *pGpu)
 {
     nv_state_t *nv = NV_GET_NV_STATE(pGpu);
-
-    if (pGpu->getProperty(pGpu, PDB_PROP_GPU_TEGRA_SOC_NVDISPLAY))
-    {
-        return;
-    }
 
     // Skip updating nv->primary_vga while RM is recovering after GPU reset
     if (nv->flags & NV_FLAG_IN_RECOVERY)

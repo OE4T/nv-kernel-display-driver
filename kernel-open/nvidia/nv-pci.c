@@ -733,21 +733,17 @@ nv_pci_tegra_devfreq_get_cur_freq(struct device *dev, unsigned long *freq)
     struct nv_pci_tegra_devfreq_dev *tdev = to_tegra_devfreq_dev(dev);
 
     //
-    // When GPU is suspended(railgated), the PM runtime suspend callback should
-    // suspend all devfreq devices, and devfreq cycle should not be triggered.
-    //
-    // However, users are still able to change the devfreq governor from the
-    // sysfs interface and indirectly invoke the update_devfreq function, which
-    // will further call the get_dev_status callback function.
+    // Clock frequency reported from CCF is only valid when GPU is active.
+    // If GPU is suspended, return 0 frequency because whole GPU is powered off.
+    // Otherwise, return the last frequency step saved in devfreq.
     //
     if (pm_runtime_active(dev->parent))
-    {
         *freq = clk_get_rate(tdev->clk);
-    }
+    else if (pm_runtime_suspended(dev->parent))
+        *freq = 0;
     else
-    {
         *freq = tdev->devfreq->previous_freq;
-    }
+
     return 0;
 }
 
