@@ -1,5 +1,5 @@
 /*
- * SPDX-FileCopyrightText: Copyright (c) 2012-2025 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
+ * SPDX-FileCopyrightText: Copyright (c) 2012-2026 NVIDIA CORPORATION & AFFILIATES. All rights reserved.
  * SPDX-License-Identifier: MIT
  *
  * Permission is hereby granted, free of charge, to any person obtaining a
@@ -360,24 +360,36 @@ osCheckGpuBarsOverlapAddrRange
     gpuInstance = 0;
     while ((pGpu = gpumgrGetNextGpu(gpuMask, &gpuInstance)) != NULL)
     {
-        if (pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB))
+        NV_INIT_RANGE(gpuPhysAddrRange, pGpu->busInfo.gpuPhysAddr,
+            pGpu->busInfo.gpuPhysAddr +  pGpu->deviceMappings[0].gpuNvLength -1);
+
+        if (NV_IS_OVERLAPPING_RANGE(gpuPhysAddrRange, addrRange))
         {
+            NV_PRINTF(LEVEL_ERROR,
+                      "%s(): phys range 0x%016llx-0x%016llx overlaps with GPU BAR0\n",
+                      __FUNCTION__, addrRange.min, addrRange.max);
+            return NV_ERR_INVALID_ADDRESS;
+        }
+
+        if ((pGpu->getProperty(pGpu, PDB_PROP_GPU_ZERO_FB)) ||
+            (pGpu->getProperty(pGpu, PDB_PROP_GPU_TEGRA_SOC_NVDISPLAY)))
+        {
+            // No local FB or BAR2 for ZERO_FB and TEGRA_SOC_NVDISPLAY.
             continue;
         }
 
         NV_INIT_RANGE(gpuPhysFbAddrRange, gpumgrGetGpuPhysFbAddr(pGpu),
             gpumgrGetGpuPhysFbAddr(pGpu) + pGpu->fbLength -1);
 
-        NV_INIT_RANGE(gpuPhysAddrRange, pGpu->busInfo.gpuPhysAddr,
-            pGpu->busInfo.gpuPhysAddr +  pGpu->deviceMappings[0].gpuNvLength -1);
-
         NV_INIT_RANGE(gpuPhysInstAddrRange, pGpu->busInfo.gpuPhysInstAddr,
             pGpu->busInfo.gpuPhysInstAddr + pGpu->instLength -1);
 
         if (NV_IS_OVERLAPPING_RANGE(gpuPhysFbAddrRange, addrRange) ||
-            NV_IS_OVERLAPPING_RANGE(gpuPhysAddrRange, addrRange)   ||
             NV_IS_OVERLAPPING_RANGE(gpuPhysInstAddrRange, addrRange))
         {
+            NV_PRINTF(LEVEL_ERROR,
+                      "%s(): phys range 0x%016llx-0x%016llx overlaps with FB or GPU BAR2\n",
+                      __FUNCTION__, addrRange.min, addrRange.max);
             return NV_ERR_INVALID_ADDRESS;
         }
     }
@@ -463,9 +475,6 @@ osCreateOsDescriptorFromIoMemory
     rmStatus = osCheckGpuBarsOverlapAddrRange(physAddrRange);
     if (rmStatus != NV_OK)
     {
-        NV_PRINTF(LEVEL_ERROR,
-                  "%s(): phys range 0x%016llx-0x%016llx overlaps with GPU BARs",
-                  __FUNCTION__, physAddrRange.min, physAddrRange.max);
         return rmStatus;
     }
 

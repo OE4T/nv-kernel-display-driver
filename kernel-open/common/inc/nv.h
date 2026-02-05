@@ -497,6 +497,7 @@ typedef struct nv_state_t
     NvBool supports_tegra_igpu_rg;
     NvBool is_tegra_pci_igpu_rg_enabled;
     NvU32 tegra_pci_igpu_pg_mask;
+    NvU32 gpc_fuse_status_offset;
 
     NvBool primary_vga;
 
@@ -1022,6 +1023,7 @@ NvBool    NV_API_CALL nv_match_gpu_os_info(nv_state_t *, void *);
 void      NV_API_CALL nv_get_updated_emu_seg(NvU32 *start, NvU32 *end);
 void      NV_API_CALL nv_get_screen_info(nv_state_t *, NvU64 *, NvU32 *, NvU32 *, NvU32 *, NvU32 *, NvU64 *);
 void      NV_API_CALL nv_set_gpu_pg_mask(nv_state_t *);
+void      NV_API_CALL nv_trigger_gpu_flr(nv_state_t *);
 
 struct dma_buf;
 typedef struct nv_dma_buf nv_dma_buf_t;
@@ -1307,6 +1309,14 @@ static inline NvU64 nv_rdtsc(void)
 }
 
 #endif
+
+static inline NvBool nv_dev_needs_vidmem_preservation(const nv_state_t *nv)
+{
+    /*
+     * Tegra iGPUs and SoC display devices don't need vidmem preservation.
+     */
+    return !nv->is_tegra_pci_igpu && !NV_IS_SOC_DISPLAY_DEVICE(nv);
+}
 
 #endif /* NVRM */
 

@@ -617,8 +617,16 @@ osInitNvMapping(
                              NV_REG_PRESERVE_VIDEO_MEMORY_ALLOCATIONS,
                              &data) == NV_OK) && data)
     {
+        if (data == NV_REG_PRESERVE_VIDEO_MEMORY_ALLOCATIONS_ENABLED)
+        {
+            nv->preserve_vidmem_allocations = NV_TRUE;
+        }
+        else if (data == NV_REG_PRESERVE_VIDEO_MEMORY_ALLOCATIONS_AUTO)
+        {
+            /* If the kernel supports suspend notifiers, enable video memory allocations */
+            nv->preserve_vidmem_allocations = os_supports_kernel_suspend_notifiers();
+        }
 
-        nv->preserve_vidmem_allocations = NV_TRUE;
     }
 
     // Check if SMMU can be enabled on PushBuffer Aperture
@@ -1143,8 +1151,10 @@ NvBool RmInitPrivateState(
     nv_set_dma_address_size(pNv, dmaAddrWidth);
 
     pNv->is_tegra_pci_igpu = !NV_IS_SOC_DISPLAY_DEVICE(pNv) && gpuarchIsZeroFb(pGpuArch);
-    //  Only certain Tegra PCI iGPUs support Rail-Gating
+    // Only certain Tegra PCI iGPUs support Rail-Gating
     pNv->supports_tegra_igpu_rg = pNv->is_tegra_pci_igpu && gpuarchSupportsIgpuRg(pGpuArch);
+    // This offset is only used by the Tegra PCI iGPUs which register devfreq devices
+    pNv->gpc_fuse_status_offset = gpuarchGetGpcFuseStatusOffset(pGpuArch);
 
     os_mem_set(nvp, 0, sizeof(*nvp));
     nvp->status = NV_ERR_INVALID_STATE;

@@ -1074,7 +1074,9 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
 #endif
     struct clk *clk;
     int i, err, node;
-    u32 gpu_pg_mask;
+    resource_size_t bar0_addr, bar0_size;
+    void *bar0_map;
+    u32 gpc_fuse_mask;
 
     while (pbus->parent != NULL)
     {
@@ -1083,21 +1085,26 @@ nv_pci_gb10b_register_devfreq(struct pci_dev *pdev)
 
     node = max(0, dev_to_node(to_pci_host_bridge(pbus->bridge)->dev.parent));
 
-    if (nv->tegra_pci_igpu_pg_mask == NV_TEGRA_PCI_IGPU_PG_MASK_DEFAULT)
+    bar0_addr = (resource_size_t)nv->bars[NV_GPU_BAR_INDEX_REGS].cpu_address;
+    bar0_size = (resource_size_t)nv->bars[NV_GPU_BAR_INDEX_REGS].size;
+    bar0_map = devm_ioremap(&pdev->dev, bar0_addr, bar0_size);
+
+    if (bar0_map == NULL)
     {
-        gpu_pg_mask = 0;
+        gpc_fuse_mask = 0;
     }
     else
     {
-        gpu_pg_mask = nv->tegra_pci_igpu_pg_mask;
-        nv_printf(NV_DBG_INFO, "NVRM: devfreq register receives gpu_pg_mask = %u\n", gpu_pg_mask);
+        gpc_fuse_mask = readl(bar0_map + nv->gpc_fuse_status_offset);
     }
+
+    nv_printf(NV_DBG_INFO, "NVRM: devfreq registration detects gpc_fuse_mask = %u\n", gpc_fuse_mask);
 
     for (i = 0; i < nvl->devfreq_table_size; i++)
     {
         tdata = &nvl->devfreq_table[i];
 
-        if (gpu_pg_mask && (gpu_pg_mask & tdata->gpc_fuse_field))
+        if (gpc_fuse_mask && (gpc_fuse_mask & tdata->gpc_fuse_field))
         {
             continue;
         }
@@ -1644,6 +1651,7 @@ static void nv_init_tegra_gpu_pg_mask(nvidia_stack_t *sp, struct pci_dev *pci_de
     nv_linux_state_t *nvl = pci_get_drvdata(pci_dev);
     nv_state_t *nv = NV_STATE_PTR(nvl);
     struct device_node *np = pci_dev->dev.of_node;
+    struct device *dev = &pci_dev->dev;
     u32 gpu_pg_mask = 0;
 
     /* Only continue with certain Tegra PCI iGPUs */
@@ -1662,6 +1670,13 @@ static void nv_init_tegra_gpu_pg_mask(nvidia_stack_t *sp, struct pci_dev *pci_de
     }
 
     nv_set_gpu_pg_mask(nv);
+
+    /*
+     * Trigger GPU reset to make new value of static TPC/GPC/FBP
+     * power-gating mask effective in BPMP-FW. Otherwise, the BPMP-FW
+     * may just save the mask in SW variable until next GPU reset.
+     */
+    nv_trigger_gpu_flr(nv);
 }
 
 static NvBool

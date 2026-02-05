@@ -2765,3 +2765,8 @@ NV_STATUS NV_API_CALL os_device_vm_present(void)
     return NV_ERR_NOT_SUPPORTED;
 #endif
 }
+
+NvBool NV_API_CALL os_supports_kernel_suspend_notifiers(void)
+{
+    return (NVreg_UseKernelSuspendNotifiers == 1);
+}

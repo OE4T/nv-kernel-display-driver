@@ -65,7 +65,7 @@ extern char *NVreg_ExcludedGpus;
 static char nv_registry_keys[NV_MAX_REGISTRY_KEYS_LENGTH];
 
 #if defined(CONFIG_PM)
-static nv_pm_action_depth_t nv_pm_action_depth = NV_PM_ACTION_DEPTH_DEFAULT;
+nv_pm_action_depth_t nv_procfs_pm_action_depth = NV_PM_ACTION_DEPTH_DEFAULT;
 #endif
 
 static int nv_procfs_read_registry(struct seq_file *s, void *v);
@@ -573,15 +573,15 @@ nv_procfs_write_suspend_depth(
 
     if (strcasecmp(kbuf, "uvm") == 0)
     {
-        nv_pm_action_depth = NV_PM_ACTION_DEPTH_UVM;
+        nv_procfs_pm_action_depth = NV_PM_ACTION_DEPTH_UVM;
     }
     else if (strcasecmp(kbuf, "modeset") == 0)
     {
-        nv_pm_action_depth = NV_PM_ACTION_DEPTH_MODESET;
+        nv_procfs_pm_action_depth = NV_PM_ACTION_DEPTH_MODESET;
     }
     else if (strcasecmp(kbuf, "default") == 0)
     {
-        nv_pm_action_depth = NV_PM_ACTION_DEPTH_DEFAULT;
+        nv_procfs_pm_action_depth = NV_PM_ACTION_DEPTH_DEFAULT;
     }
     else
     {
@@ -668,7 +668,7 @@ nv_procfs_write_suspend(
         return -EINVAL;
     }
 
-    status = nv_set_system_power_state(power_state, nv_pm_action_depth);
+    status = nv_set_system_power_state(power_state, nv_procfs_pm_action_depth);
 
     return (status != NV_OK) ? -EIO : count;
 }
@@ -1316,6 +1316,7 @@ int nv_procfs_init(void)
     NvU32 i = 0;
     char nv_dir_name[20];
     struct proc_dir_entry *entry;
+    NvBool create_suspend_file = NV_TRUE;
 
     snprintf(nv_dir_name, sizeof(nv_dir_name), "driver/%s", nv_device_name);
 
@@ -1339,9 +1340,17 @@ int nv_procfs_init(void)
     if (!entry)
         goto failed;
 
-    entry = NV_CREATE_PROC_FILE("suspend", proc_nvidia, suspend, NULL);
-    if (!entry)
-        goto failed;
+    if (NVreg_UseKernelSuspendNotifiers)
+    {
+        create_suspend_file = NV_FALSE;
+    }
+
+    if (create_suspend_file)
+    {
+        entry = NV_CREATE_PROC_FILE("suspend", proc_nvidia, suspend, NULL);
+        if (!entry)
+            goto failed;
+    }
 #endif
 
     proc_nvidia_warnings = NV_CREATE_PROC_DIR("warnings", proc_nvidia);

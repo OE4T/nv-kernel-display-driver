@@ -40,6 +40,8 @@ void        nv_procfs_add_warning       (const char *, const char *);
 int         nv_procfs_add_gpu           (nv_linux_state_t *);
 void        nv_procfs_remove_gpu        (nv_linux_state_t *);
 
+extern nv_pm_action_depth_t nv_procfs_pm_action_depth;
+
 int         nvidia_mmap                 (struct file *, struct vm_area_struct *);
 int         nvidia_mmap_helper          (nv_state_t *, nv_linux_file_private_t *, nvidia_stack_t *, struct vm_area_struct *, void *);
 int         nv_encode_caching           (pgprot_t *, NvU32, nv_memory_type_t);

@@ -1718,6 +1718,7 @@ extern NvU32 NVreg_RegisterPlatformDeviceDriver;
 extern NvU32 NVreg_EnableResizableBar;
 extern NvU32 NVreg_TegraGpuPgMask;
 extern NvU32 NVreg_EnableNonblockingOpen;
+extern NvU32 NVreg_UseKernelSuspendNotifiers;
 
 extern NvU32 num_probed_nv_devices;
 extern NvU32 num_nv_devices;
