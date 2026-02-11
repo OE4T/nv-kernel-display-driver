@@ -56,6 +56,24 @@ nvidia-y += $(NVIDIA_BINARY_OBJECT_O)
 #
 
 NVIDIA_CFLAGS += -I$(src)/nvidia
+NVIDIA_CFLAGS += -I$(src)/common/inc
+NVIDIA_CFLAGS += -I$(src)
+NVIDIA_CFLAGS += -DNV_LINUX
+NVIDIA_CFLAGS += -DNV_KERNEL_INTERFACE_LAYER
+NVIDIA_CFLAGS += -DNV_VERSION_STRING=\"540.4.0\"
+NVIDIA_CFLAGS += -DNVRM
+NVIDIA_CFLAGS += -DNV_SPECTRE_V2=0
+NVIDIA_CFLAGS += -Wno-missing-prototypes
+NVIDIA_CFLAGS += -Wno-unused-function
+NVIDIA_CFLAGS += -Wno-empty-body
+NVIDIA_CFLAGS += -Wno-missing-declarations
+NVIDIA_CFLAGS += -Wno-old-style-declaration
+NVIDIA_CFLAGS += -Wno-unused-variable
+NVIDIA_CFLAGS += -Wno-enum-int-mismatch
+NVIDIA_CFLAGS += -Wno-old-style-declaration
+NVIDIA_CFLAGS += -Wno-cpp
+NVIDIA_CFLAGS += -I$(NV_OOT_SOURCES)/include
+NVIDIA_CFLAGS += -Wno-expansion-to-defined
 NVIDIA_CFLAGS += -DNVIDIA_UNDEF_LEGACY_BIT_MACROS
 
 ifeq ($(NV_BUILD_TYPE),release)

@@ -41,7 +41,7 @@ NVIDIA_MODESET_BINARY_OBJECT := $(src)/nvidia-modeset/nv-modeset-kernel.o_binary
 NVIDIA_MODESET_BINARY_OBJECT_O := nvidia-modeset/nv-modeset-kernel.o
 
 quiet_cmd_symlink = SYMLINK $@
-cmd_symlink = ln -sf $< $@
+cmd_symlink = ln -sf $(notdir $<) $@
 
 targets += $(NVIDIA_MODESET_BINARY_OBJECT_O)
 
@@ -56,7 +56,21 @@ nvidia-modeset-y += $(NVIDIA_MODESET_BINARY_OBJECT_O)
 #
 
 NVIDIA_MODESET_CFLAGS += -I$(src)/nvidia-modeset
+NVIDIA_MODESET_CFLAGS += -I$(src)/common/inc
+NVIDIA_MODESET_CFLAGS += -I$(src)
+NVIDIA_MODESET_CFLAGS += -I$(NV_OOT_SOURCES)/include
+NVIDIA_MODESET_CFLAGS += -DNV_LINUX
+NVIDIA_MODESET_CFLAGS += -DNV_KERNEL_INTERFACE_LAYER
+NVIDIA_MODESET_CFLAGS += -DNV_VERSION_STRING=\"540.4.0\"
+NVIDIA_MODESET_CFLAGS += -DNV_SPECTRE_V2=0
+NVIDIA_MODESET_CFLAGS += -Wno-old-style-declaration
+NVIDIA_MODESET_CFLAGS += -Wno-missing-prototypes
+NVIDIA_MODESET_CFLAGS += -Wno-missing-declarations
 NVIDIA_MODESET_CFLAGS += -UDEBUG -U_DEBUG -DNDEBUG -DNV_BUILD_MODULE_INSTANCES=0
+
+ifneq ($(SYSSRCHOST1X),)
+ NVIDIA_MODESET_CFLAGS += -I$(SYSSRCHOST1X)
+endif
 
 $(call ASSIGN_PER_OBJ_CFLAGS, $(NVIDIA_MODESET_OBJECTS), $(NVIDIA_MODESET_CFLAGS))
 
