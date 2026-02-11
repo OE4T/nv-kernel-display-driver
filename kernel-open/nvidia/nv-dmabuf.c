@@ -783,7 +783,7 @@ nv_dma_buf_map(
 #if defined(NV_DMA_BUF_HAS_DYNAMIC_ATTACHMENT) && \
     defined(NV_DMA_BUF_ATTACHMENT_HAS_PEER2PEER)
     if (!priv->nv->coherent &&
-        dma_buf_attachment_is_dynamic(attachment) &&
+        attachment->importer_ops &&
         !attachment->peer2peer)
     {
         nv_printf(NV_DBG_ERRORS,
