@@ -59,6 +59,7 @@ static inline struct nv_drm_framebuffer *to_nv_framebuffer(
 struct drm_framebuffer *nv_drm_internal_framebuffer_create(
     struct drm_device *dev,
     struct drm_file *file,
+    const struct drm_format_info *info,
     struct drm_mode_fb_cmd2 *cmd);
 
 #endif /* NV_DRM_ATOMIC_MODESET_AVAILABLE */
