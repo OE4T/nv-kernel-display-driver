@@ -246,7 +246,7 @@ unsigned long nv_drm_timeout_from_ms(NvU64 relative_timeout_ms)
 
 bool nv_drm_del_timer_sync(nv_drm_timer *timer)
 {
-    if (del_timer_sync(&timer->kernel_timer)) {
+    if (timer_delete_sync(&timer->kernel_timer)) {
         return true;
     } else {
         return false;

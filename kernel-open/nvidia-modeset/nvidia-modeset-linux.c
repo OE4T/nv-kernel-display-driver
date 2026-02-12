@@ -863,7 +863,7 @@ static void nvkms_kthread_q_callback(void *arg)
      * pending timers and than waiting for workqueue callbacks.
      */
     if (timer->kernel_timer_created) {
-        del_timer_sync(&timer->kernel_timer);
+        timer_delete_sync(&timer->kernel_timer);
     }
 
     /*
@@ -1969,7 +1969,7 @@ restart:
              * completion, and we wait for queue completion with
              * nv_kthread_q_stop below.
              */
-            if (del_timer_sync(&timer->kernel_timer) == 1) {
+            if (timer_delete_sync(&timer->kernel_timer) == 1) {
                 /*  We've deactivated timer so we need to clean after it */
                 list_del(&timer->timers_list);
 
