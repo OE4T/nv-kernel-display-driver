@@ -244,14 +244,11 @@ unsigned long nv_drm_timeout_from_ms(NvU64 relative_timeout_ms)
     return jiffies + msecs_to_jiffies(relative_timeout_ms);
 }
 
-bool nv_drm_del_timer_sync(nv_drm_timer *timer)
+void nv_drm_del_timer_sync(nv_drm_timer *timer)
 {
-    if (del_timer_sync(&timer->kernel_timer)) {
-        return true;
-    } else {
-        return false;
-    }
+    nv_timer_delete_sync(&timer->kernel_timer);
 }
+
 
 #if defined(NV_DRM_FENCE_AVAILABLE)
 int nv_drm_create_sync_file(nv_dma_fence_t *fence)

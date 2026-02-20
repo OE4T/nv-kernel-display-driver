@@ -218,7 +218,7 @@ void NV_API_CALL nv_cancel_nano_timer(
 #if NV_NANO_TIMER_USE_HRTIMER
     hrtimer_cancel(&nv_nstimer->hr_timer);
 #else
-    del_timer_sync(&nv_nstimer->jiffy_timer);
+    nv_timer_delete_sync(&nv_nstimer->jiffy_timer);
 #endif
 
 }
