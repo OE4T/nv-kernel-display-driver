@@ -206,6 +206,9 @@ fail:
 struct drm_framebuffer *nv_drm_internal_framebuffer_create(
     struct drm_device *dev,
     struct drm_file *file,
+#if defined(NV_DRM_MODE_CONFIG_FB_CREATE_HAS_DRM_FORMAT_INFO)
+    const struct drm_format_info *info,
+#endif
     struct drm_mode_fb_cmd2 *cmd)
 {
     struct nv_drm_device *nv_dev = to_nv_device(dev);
@@ -259,6 +262,9 @@ struct drm_framebuffer *nv_drm_internal_framebuffer_create(
         dev,
         #endif
         &nv_fb->base,
+#if defined(NV_DRM_MODE_CONFIG_FB_CREATE_HAS_DRM_FORMAT_INFO)
+        info,
+#endif
         cmd);
 
     /*

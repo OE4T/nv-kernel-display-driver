@@ -5813,6 +5813,27 @@ compile_test() {
             compile_check_conftest "$CODE" "NV_DRM_MODE_CONFIG_HAS_ALLOW_FB_MODIFIERS" "" "types"
         ;;
 
+        drm_mode_config_fb_create_has_drm_format_info)
+            #
+            # Determine if the 'fb_create' function pointer in the
+            # 'drm_mode_config_funcs' structure takes a pointer to
+            # the 'drm_format_info' structure.
+            #
+            # The parameter was added by commit 81112eaac ("drm: Pass the format info
+            # to .fb_create()") in v6.17.
+            #
+            CODE="$CONFTEST_PREAMBLE
+            #include <drm/drm_mode_config.h>
+            struct drm_framebuffer *conftest_drm_mode_config_fb_create_has_drm_format_info(
+               struct drm_mode_config_funcs *funcs,
+               struct drm_device *dev, struct drm_file *file_priv,
+               struct drm_format_info *info, struct drm_mode_fb_cmd2 *mode_cmd) {
+                return funcs->fb_create(dev, file_priv, info, mode_cmd);
+            }"
+
+            compile_check_conftest "$CODE" "NV_DRM_MODE_CONFIG_FB_CREATE_HAS_DRM_FORMAT_INFO" "" "types"
+            ;;
+
         dma_set_mask_and_coherent)
             #
             # Determine if dma_set_mask_and_coherent function is present.

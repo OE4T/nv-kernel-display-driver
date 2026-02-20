@@ -168,6 +168,9 @@ static void nv_drm_output_poll_changed(struct drm_device *dev)
 static struct drm_framebuffer *nv_drm_framebuffer_create(
     struct drm_device *dev,
     struct drm_file *file,
+    #if defined(NV_DRM_MODE_CONFIG_FB_CREATE_HAS_DRM_FORMAT_INFO)
+    const struct drm_format_info *info,
+    #endif
     #if defined(NV_DRM_HELPER_MODE_FILL_FB_STRUCT_HAS_CONST_MODE_CMD_ARG)
     const struct drm_mode_fb_cmd2 *cmd
     #else
@@ -183,6 +186,9 @@ static struct drm_framebuffer *nv_drm_framebuffer_create(
     fb = nv_drm_internal_framebuffer_create(
             dev,
             file,
+            #if defined(NV_DRM_MODE_CONFIG_FB_CREATE_HAS_DRM_FORMAT_INFO)
+            info,
+            #endif
             &local_cmd);
 
     #if !defined(NV_DRM_HELPER_MODE_FILL_FB_STRUCT_HAS_CONST_MODE_CMD_ARG)
