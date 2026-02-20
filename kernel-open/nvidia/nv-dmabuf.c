@@ -780,10 +780,13 @@ nv_dma_buf_map(
     // On non-coherent platforms, importers must be able to handle peer
     // MMIO resources not backed by struct page.
     //
-#if defined(NV_DMA_BUF_HAS_DYNAMIC_ATTACHMENT) && \
-    defined(NV_DMA_BUF_ATTACHMENT_HAS_PEER2PEER)
+#if defined(NV_DMA_BUF_ATTACHMENT_HAS_PEER2PEER)
     if (!priv->nv->coherent &&
+#if defined(NV_DMA_BUF_HAS_DYNAMIC_ATTACHMENT)
         dma_buf_attachment_is_dynamic(attachment) &&
+#else
+        attachment->importer_ops != NULL &&
+#endif
         !attachment->peer2peer)
     {
         nv_printf(NV_DBG_ERRORS,

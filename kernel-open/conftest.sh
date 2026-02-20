@@ -3922,6 +3922,8 @@ compile_test() {
             #
             # Added by commit: 15fd552d186c
             # ("dma-buf: change DMA-buf locking convention v3") in v5.5 (2018-07-03)
+            # Removed by commit: de68b17d5d0
+            # ("dma-buf: dma-buf: stop mapping sg_tables on attach v2") in v6.16
             #
             CODE="
             #include <linux/dma-buf.h>
