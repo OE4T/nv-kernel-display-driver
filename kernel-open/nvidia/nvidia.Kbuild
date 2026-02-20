@@ -41,7 +41,7 @@ NVIDIA_BINARY_OBJECT := $(src)/nvidia/nv-kernel.o_binary
 NVIDIA_BINARY_OBJECT_O := nvidia/nv-kernel.o
 
 quiet_cmd_symlink = SYMLINK $@
- cmd_symlink = ln -sf $< $@
+ cmd_symlink = mkdir -p $(dir $@); ln -sf --relative $< $@
 
 targets += $(NVIDIA_BINARY_OBJECT_O)
 

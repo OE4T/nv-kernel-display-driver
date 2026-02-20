@@ -41,7 +41,7 @@ NVIDIA_MODESET_BINARY_OBJECT := $(src)/nvidia-modeset/nv-modeset-kernel.o_binary
 NVIDIA_MODESET_BINARY_OBJECT_O := nvidia-modeset/nv-modeset-kernel.o
 
 quiet_cmd_symlink = SYMLINK $@
-cmd_symlink = ln -sf $< $@
+cmd_symlink = mkdir -p $(dir $@); ln -sf --relative $< $@
 
 targets += $(NVIDIA_MODESET_BINARY_OBJECT_O)
 
