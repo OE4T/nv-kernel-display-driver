@@ -90,7 +90,7 @@ build_cflags() {
     ISYSTEM=`$CC -print-file-name=include 2> /dev/null`
     BASE_CFLAGS="-O2 -D__KERNEL__ \
 -DKBUILD_BASENAME=\"#conftest$$\" -DKBUILD_MODNAME=\"#conftest$$\" \
--nostdinc -isystem $ISYSTEM \
+-nostdinc -isystem $ISYSTEM -fshort-wchar \
 -Wno-implicit-function-declaration -Wno-strict-prototypes"
 
     if [ "$OUTPUT" != "$SOURCES" ]; then
