@@ -1949,7 +1949,9 @@ static struct drm_driver nv_drm_driver = {
     .name                   = "nvidia-drm",
 
     .desc                   = "NVIDIA DRM driver",
+#if defined(NV_DRM_DRIVER_HAS_DATE)
     .date                   = "20160202",
+#endif
 
 #if defined(NV_DRM_DRIVER_HAS_DEVICE_LIST)
     .device_list            = LIST_HEAD_INIT(nv_drm_driver.device_list),
