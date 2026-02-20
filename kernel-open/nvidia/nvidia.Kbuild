@@ -267,3 +267,4 @@ NV_CONFTEST_GENERIC_COMPILE_TESTS += mdev_available
 NV_CONFTEST_GENERIC_COMPILE_TESTS += cmd_uphy_display_port_init
 NV_CONFTEST_GENERIC_COMPILE_TESTS += cmd_uphy_display_port_off
 NV_CONFTEST_GENERIC_COMPILE_TESTS += memory_failure_mf_sw_simulated_defined
+NV_CONFTEST_GENERIC_COMPILE_TESTS += module_import_ns_takes_constant
