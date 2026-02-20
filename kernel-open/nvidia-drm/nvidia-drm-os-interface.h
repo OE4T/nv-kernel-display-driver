@@ -105,7 +105,7 @@ void nv_drm_timer_setup(nv_drm_timer *timer,
 
 void nv_drm_mod_timer(nv_drm_timer *timer, unsigned long relative_timeout_ms);
 
-bool nv_drm_del_timer_sync(nv_drm_timer *timer);
+void nv_drm_del_timer_sync(nv_drm_timer *timer);
 
 unsigned long nv_drm_timer_now(void);
 
