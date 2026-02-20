@@ -123,6 +123,9 @@ ifneq ($(wildcard /proc/sgi_uv),)
  EXTRA_CFLAGS += -DNV_CONFIG_X86_UV
 endif
 
+# EXTRA_CFLAGS compatibility was dropped in 6.18, so add to
+# ccflags-y ourselves if Kbuild doesn't do it for us
+ccflags-y += $(call try-run,grep EXTRA_CFLAGS $(NV_KERNEL_SOURCES)/scripts/Makefile.lib,,$(EXTRA_CFLAGS))
 
 #
 # The conftest.sh script tests various aspects of the target kernel.
