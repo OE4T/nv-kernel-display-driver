@@ -5060,7 +5060,12 @@ compile_test() {
             CODE="
             #include <drm/drm_gem.h>
             int conftest_drm_gem_object_vmap_has_map_arg(
-                    struct drm_gem_object *obj, struct dma_buf_map *map) {
+                    struct drm_gem_object *obj,
+            #ifdef NV_LINUX_IOSYS_MAP_H_PRESENT
+                    struct iosys_map *map) {
+            #else
+                    struct dma_buf_map *map) {
+            #endif
                 return obj->funcs->vmap(obj, map);
             }"
 
